@@ -10,7 +10,7 @@ setupConfig = function(err, launchdata, xAPIWrapper) {
     } else {
       wrapper = ADL.XAPIWrapper;
       wrapper.changeConfig({
-                //LRS endpoint, user, and password
+        
             });
       log("--- content statically configured ---\n" + JSON.stringify(wrapper.lrs));
       var curStudentEmail = "mailto:xhu@memphis.edu";
