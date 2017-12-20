@@ -43,7 +43,7 @@ for i in range(0,df.shape[0]):
 ##        print(topic+","+learningResource+","+item)
     for j in range(3,df.shape[1]):
         if(row[j] == '1'):
-            dictAll[topic][learningResource][item].append(columns[j])
+            dictAll[topic][learningResource][item].append(columns[j].lower())
 
 topicsToKCs = {}
 for topic in dictAll:
