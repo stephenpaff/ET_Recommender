@@ -1,37 +1,46 @@
 import pandas as pd
 import requests
 from requests.auth import HTTPBasicAuth
+import json
 
-df = pd.read_csv('ET Assignment Bundles with Links - KC mapping.csv')
+df = pd.read_csv('ET_KC_MAPPING - Learning_Resource_KC_Mapping.csv')
+#df = pd.read_csv('ET Assignment Bundles with Links - KC mapping.csv')
 
-#Rename columns to use second row in spreadsheet
-df.columns = df.iloc[[0]].values.tolist()[0]
+#Rename KC columns to use second row in spreadsheet
+df.columns = df.columns[0:10].values.tolist() + df.iloc[[0]].values.tolist()[0][10:132]
 df = df.drop(0)
 
 #Get rid of unuseful columns
-df = df.drop(columns=['Old_Link','Old_Topic','Maths'])
-df = df.iloc[:,:-2]
+df = df.drop(columns=['GUID','Lesson_Name','DocsLink','HTML5 Link','Checked Alignment?','Math'])
+df = df.iloc[:,:-3]
 
 #Get rid of duplicate/unuseful rows
 df = df[pd.notnull(df['Topic'])]
 
 dictAll = {}
+lrToLRType = {}
 
 columns = df.columns.values.tolist()
 
 for i in range(0,df.shape[0]):
     row = df.iloc[[i]].values.tolist()[0]
-    topic = row[0]
-    learningResource = row[1]
-    item = row[2]
+    item = row[0].lower()
+    topic = row[1].lower()
+    learningResource = row[2].lower()
+    lrType = row[3].lower()
+
+    if learningResource not in lrToLRType:
+        lrToLRType[learningResource] = set()
+    lrToLRType[learningResource].add(lrType)
+
     if topic not in dictAll:
         dictAll[topic] = {}
     if learningResource not in dictAll[topic]:
         dictAll[topic][learningResource] = {}
     if item not in dictAll[topic][learningResource]:
         dictAll[topic][learningResource][item] = []
-    else:
-        print(topic+","+learningResource+","+item)
+##    else:
+##        print(topic+","+learningResource+","+item)
     for j in range(3,df.shape[1]):
         if(row[j] == '1'):
             dictAll[topic][learningResource][item].append(columns[j])
@@ -81,21 +90,21 @@ for topic in dictAll:
             itemsToLR[item].add(learningResource)
 
 topicDifficulties = {
-"Ohm's Law & Kirchhoff’s Law":1,
-'Series & Parallel Circuit':2,
-'Series/Parallel Combination':3,
-'Filter':3,
-'PN Junction':2,
-'Rectifier':3,
-'Power Supply':4,
-'Diode Limiter & Clamper':3,
-'Zener Diode & Regulator':4,
-'Transistor':3,
-'CE Amplifier':4,
-'CC Amplifier':5,
-'CB Amplifier':5,
-'Multistage Amplifier':6,
-'PushPull Amplifier':6
+"Ohm's Law & Kirchhoff’s Law".lower():1,
+'Series & Parallel Circuit'.lower():2,
+'Series/Parallel Combination'.lower():3,
+'Filter'.lower():3,
+'PN Junction'.lower():2,
+'Rectifier'.lower():3,
+'Power Supply'.lower():4,
+'Diode Limiter & Clamper'.lower():3,
+'Zener Diode & Regulator'.lower():4,
+'Transistor'.lower():3,
+'CE Amplifier'.lower():4,
+'CC Amplifier'.lower():5,
+'CB Amplifier'.lower():5,
+'Multistage Amplifier'.lower():6,
+'PushPull Amplifier'.lower():6
 }
 
 #Rescale to 0 to 1
@@ -113,7 +122,6 @@ allKCs = KCsToTopics.keys()
 for kc in allKCs:
     difficulty = 0.5
 
-    kc = kc.lower()
     if("structure" in kc):
         difficulty = 0.25
     elif("function" in kc):
@@ -125,22 +133,37 @@ for kc in allKCs:
 
     kcDifficulties[kc] = difficulty
 
+lrDifficulties = {}
+
+for lr in lrToLRType:
+    LRType = list(lrToLRType[lr])[0].lower()
+    lrDifficulty = 0.5
+
+    if 'circuit basics' in LRType or 'electronic laws' in LRType:
+        lrDifficulty = 0.25
+    elif 'autotutor knowledge check conversations' in LRType:
+        lrDifficulty = 0.5
+    elif 'autotutor deep reasoning conversations' in LRType or 'circuit reasoning' in LRType:
+        lrDifficulty = 0.75
+    elif'dragoon modeling' in LRType:
+        lrDifficulty = 1.0
+
+    lrDifficulties[lr] = lrDifficulty
+
 itemDifficulties = {}
 
 items = itemsToKCs.keys()
 
 for item in items:
-    difficulty = 0.5
-
     lr = list(itemsToLR[item])[0]
 
     KCs = itemsToKCs[item]
 
     numKCs = len(KCs)
 
-    numKCsScaled = (1 - (1 - pow(numKCs,2)))
+    numKCsScaled = (1 - (1 / pow(numKCs,2)))
 
-    lrDifficulty = 0.5 #lrDifficulties[lr] when we get the difficulty values for LRs
+    lrDifficulty = lrDifficulties[lr]
 
     difficulty = numKCsScaled + lrDifficulty
 
@@ -196,8 +219,6 @@ allData = { "actor" :{
 }
 
 allDataJSON = json.dumps(allData,cls=SetEncoder)
-
-
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.1", 'Authorization' : str('Basic ' + basicAuth)}
 
