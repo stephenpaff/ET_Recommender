@@ -10,7 +10,7 @@ setupConfig = function(err, launchdata, xAPIWrapper) {
     } else {
       wrapper = ADL.XAPIWrapper;
       wrapper.changeConfig({
-        
+
             });
       log("--- content statically configured ---\n" + JSON.stringify(wrapper.lrs));
       var curStudentEmail = "mailto:xhu@memphis.edu";
@@ -124,12 +124,7 @@ recommendationRules = {
           }
         }
       }
-      var chosenKC;
-      if(subThresholdKCs.length > 1){
-        chosenKC = subThresholdKCs[getRandomNumber(subThresholdKCs.length)]
-      }else{
-        chosenKC = subThresholdKCs[0];
-      }
+      var chosenKC = subThresholdKCs[getRandomNumber(subThresholdKCs.length)]
 
       //Assign items from AT Convo w/Knowcalculateledge Check questions or Circuit Reasoning items
     },

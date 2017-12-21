@@ -89,6 +89,11 @@ for topic in dictAll:
                 itemsToLR[item] = set()
             itemsToLR[item].add(learningResource)
 
+itemsToLRType = {}
+for item in itemsToLR:
+    lr = list(itemsToLR[item])[0]
+    itemsToLRType[item] = list(lrToLRType[lr])[0]
+
 topicDifficulties = {
 "Ohm's Law & Kirchhoff’s Law".lower():1,
 'Series & Parallel Circuit'.lower():2,
@@ -186,6 +191,7 @@ class SetEncoder(json.JSONEncoder):
 mappings = { "topicsToKCs" : topicsToKCs,
              "KCsToTopics" : KCsToTopics,
              "itemsToKCs" : itemsToKCs,
+             "itemsToLRType" : itemsToLRType,
              "topicLRToItems" : topicLRToItems }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
