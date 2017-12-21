@@ -28,24 +28,20 @@ for i in range(0,df.shape[0]):
     topic = row[1].lower()
     learningResource = row[2].lower()
     lrType = row[3].lower()
-
     if learningResource not in lrToLRType:
         lrToLRType[learningResource] = set()
     lrToLRType[learningResource].add(lrType)
-
     if topic not in dictAll:
         dictAll[topic] = {}
     if learningResource not in dictAll[topic]:
         dictAll[topic][learningResource] = {}
     if item not in dictAll[topic][learningResource]:
         dictAll[topic][learningResource][item] = []
-##    else:
-##        print(topic+","+learningResource+","+item)
     for j in range(3,df.shape[1]):
         if(row[j] == '1'):
             dictAll[topic][learningResource][item].append(columns[j].lower())
 
-topicsToKCs = {}
+topicsToKCs = {} #Used
 for topic in dictAll:
     if topic not in topicsToKCs:
         topicsToKCs[topic] = set()
@@ -72,14 +68,25 @@ for topic in dictAll:
             for kc in dictAll[topic][learningResource][item]:
                 itemsToKCs[item].add(kc)
 
-topicLRToItems = {}
+topicLRTypeToItems = {} #Used
 for topic in dictAll:
     for learningResource in dictAll[topic]:
-        pair = topic + "," + learningResource
-        if pair not in topicLRToItems:
-            topicLRToItems[pair] = set()
+        pair = topic + "," + list(lrToLRType[learningResource])[0];
+        if pair not in topicLRTypeToItems:
+            topicLRTypeToItems[pair] = set()
         for item in dictAll[topic][learningResource]:
-            topicLRToItems[pair].add(item)
+            topicLRTypeToItems[pair].add(item)
+
+topicLRTypeKCToItems = {} #Used
+for topic in dictAll:
+    for learningResource in dictAll[topic]:
+        for item in dictAll[topic][learningResource]:
+            kcs = dictAll[topic][learningResource][item]
+            for kc in kcs:
+                topicLRTypeKC = topic + "," + list(lrToLRType[learningResource])[0] + "," + kc;
+                if topicLRTypeKC not in topicLRTypeKCToItems:
+                    topicLRTypeKCToItems[topicLRTypeKC] = set()
+                topicLRTypeKCToItems[topicLRTypeKC].add(item)
 
 itemsToLR = {}
 for topic in dictAll:
@@ -89,10 +96,18 @@ for topic in dictAll:
                 itemsToLR[item] = set()
             itemsToLR[item].add(learningResource)
 
-itemsToLRType = {}
-for item in itemsToLR:
-    lr = list(itemsToLR[item])[0]
-    itemsToLRType[item] = list(lrToLRType[lr])[0]
+# itemsToLRType = {}
+# for item in itemsToLR:
+#     lr = list(itemsToLR[item])[0]
+#     itemsToLRType[item] = list(lrToLRType[lr])[0]
+#
+# LRTypeToItems = {}
+# for item in itemsToLR:
+#     lr = list(itemsToLR[item])[0]
+#     lrType = list(lrToLRType[lr])[0]
+#     if lrType not in LRTypeToItems:
+#         LRTypeToItems[lrType] = set()
+#     LRTypeToItems[lrType].add(item)
 
 topicDifficulties = {
 "Ohm's Law & Kirchhoff’s Law".lower():1,
@@ -188,11 +203,10 @@ class SetEncoder(json.JSONEncoder):
             return list(obj)
         return json.JSONEncoder.default(self, obj)
 
-mappings = { "topicsToKCs" : topicsToKCs,
-             "KCsToTopics" : KCsToTopics,
-             "itemsToKCs" : itemsToKCs,
-             "itemsToLRType" : itemsToLRType,
-             "topicLRToItems" : topicLRToItems }
+mappings = {
+             "topicLRTypeToItems" : topicLRTypeToItems,
+             "topicLRTypeKCToItems" : topicLRTypeKCToItems,
+             "topicsToKCs" : topicsToKCs }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
                  "kcDifficulties" : kcDifficulties,
@@ -229,6 +243,8 @@ allDataJSON = json.dumps(allData,cls=SetEncoder)
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.1", 'Authorization' : str('Basic ' + basicAuth)}
 
 r = requests.post(lrsURL,data=allDataJSON, headers=headers)
+
+print(r.text)
 
 #Testing
 ##test = []
