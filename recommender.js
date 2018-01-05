@@ -42,7 +42,8 @@ getRecommendation = function(curStudentEmail){
   //TODO: Default recommendation code
 }
 
-masteryThreshold = 0.6;
+topicMasteryThreshold = 0.7;
+lowTopicMasteryThreshold = 0.3
 
 populateUpdateCurUserData = function(curStudentEmail){
   curUserData = {};
@@ -181,6 +182,8 @@ populateUpdateCurUserData = function(curStudentEmail){
 
   curUserData["lastTopic"] = "filter";
 
+  curUserData["belowProcessingTimeThreshold"] = true;
+
   return curUserData;
 }
 
@@ -192,13 +195,15 @@ var ATKCC = "autotutor knowledge check conversations";
 var DRAGOON = "dragoon modeling";
 var EL = "electronic laws";
 
+var TS = "topic summary";
+
 recommendationRules = {
     repeatingTopics : function(curUserData,mappingsAndDifficulties){
       log("repeatingTopics");
       var recommendations = [];
 
       for(var topic in curUserData.topicScores){
-        if(curUserData.topicScores[topic] < masteryThreshold){
+        if(curUserData.topicScores[topic] < topicMasteryThreshold){
           //find AT DR Question associate with topic, select randomly, apply
           //branching to LR and Items within topic of the day
           topicLRType = topic + "," + ATDRC;
@@ -214,13 +219,13 @@ recommendationRules = {
       var subThresholdKCsAndTopics = [];
 
       for(var topic in curUserData.topicScores){
-        if(0.39 < curUserData.topicScores[topic] < 0.69){
+        if(lowTopicMasteryThreshold < curUserData.topicScores[topic] < topicMasteryThreshold){
           topicsToKCs = mappingsAndDifficulties["mappings"]["topicsToKCs"];
           log("topic: " + topic);
           var KCs = topicsToKCs[topic];
           for(index in KCs){
             var kc = KCs[index];
-            if(curUserData.kcScores[kc] < masteryThreshold){
+            if(curUserData.kcScores[kc] < topicMasteryThreshold){
               log("subThresholdKC: " + kc);
               subThresholdKCsAndTopics.push([kc,topic]);
             }
@@ -270,7 +275,7 @@ recommendationRules = {
       var mapping = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"];
 
       for(var topic in curUserData.topicScores){
-        if(curUserData.topicScores[topic] > masteryThreshold){//a)
+        if(curUserData.topicScores[topic] > topicMasteryThreshold){//a)
             //look for whether user has been assigned items from LRs: AT DR Convos, CR Items, or Dragoon items
             //if not then recommend that LR
             var topicLRType = topic + "," + ATDRC;
@@ -288,7 +293,7 @@ recommendationRules = {
         }
       }
 
-      //b) look for LR with scores less than masteryThreshold ->
+      //b) look for LR with scores less than topicMasteryThreshold ->
       //recommend AT DR Convos, Circuit Reasoning items, or Dragoon items
       var topicLRType = curUserData.lastTopic + "," + ATDRC;
       getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
@@ -302,11 +307,84 @@ recommendationRules = {
     motivatedBottomDweller : function(curUserData,mappingsAndDifficulties){
       var recommendations = [];
 
+      //Recommend one of the following Learning Resources if the student’s time
+      //on tasks meets or exceeds some processing time threshold but their performance
+      //on a previous topic was below a low threshold .3:
+      //AutoTutor Knowledge Check Conversation questions, Circuit Basics, and Electronics Laws.
+      if(curUserData.topicScores[curUserData.lastTopic] < lowTopicMasteryThreshold){
+        if(!curUserData.belowProcessingTimeThreshold){
+          var topicLRType = curUserData.lastTopic + ",";
+          switch(getRandomNumber(3)){
+            case 0:
+              topicLRType += ATKCC;
+              break;
+            case 1:
+              topicLRType += CB;
+              break;
+            case 2:
+              topicLRType += EL;
+              break;
+          }
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
+        }
+      }
 
+      return recommendations;
     },
     unmotivatedBottomDweller : function(curUserData,mappingsAndDifficulties){
+      var recommendations = [];
 
+      //Recommend one of the following Learning Resources if the student’s time
+      //on tasks was below the processing time thresholds and the student’s performance
+      //on previous topics was below .3: Topic Summary, Circuit Basics, or Electronics Laws.
+      if(curUserData.topicScores[curUserData.lastTopic] < lowTopicMasteryThreshold){
+        if(curUserData.belowProcessingTimeThreshold){
+          var topicLRType = curUserData.lastTopic + ",";
+          switch(getRandomNumber(3)){
+            case 0:
+              topicLRType += TS;
+              break;
+            case 1:
+              topicLRType += CB;
+              break;
+            case 2:
+              topicLRType += EL;
+              break;
+          }
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
+        }
+      }
     }
+}
+
+getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDifficulties, recommendationsArr){
+  log("getItemFromTopicLRTypeWithZPDAlgorithm");
+  var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType];
+  var itemDifficulties = mappingsAndDifficulties["difficulties"]["itemDifficulties"];
+  var kcDifficulties = mappingsAndDifficulties["difficulties"]["kcDifficulties"];
+  var itemsToKCs = mappingsAndDifficulties["mappings"]["itemsToKCs"];
+  var minDeviation = Number.MAX_VALUE;
+  var minDeviationItem = "";
+  for(item in items){
+    var kcsForItem = itemsToKCs[item];
+    var maxKCScore = 0;
+    for(kc in kcsForItem){
+      if(curUserData.kcScores.indexOf(kc)!= -1){
+        if(curUserData.kcScores[kc] > maxKCScore){
+          maxKCScore = curUserData.kcScores[kc];
+        }
+      }
+    }
+    var projectedPerformanceScore = maxKCScore;
+    var itemDifficulty = itemDifficulties[item];
+    var value = Math.pow(projectedPerformanceScore - itemDifficulty,2);
+    if(value < minDeviation){
+      minDeviation = value;
+      minDeviationItem = item;
+    }
+  }
+  var recommendation = topicLRType + "," + minDeviationItem;
+  recommendationsArr.push(recommendation);
 }
 
 getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,recommendationsArr){

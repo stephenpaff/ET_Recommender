@@ -59,7 +59,7 @@ for topic in dictAll:
                     KCsToTopics[kc] = set()
                 KCsToTopics[kc].add(topic)
 
-itemsToKCs = {}
+itemsToKCs = {} #Used
 for topic in dictAll:
     for learningResource in dictAll[topic]:
         for item in dictAll[topic][learningResource]:
@@ -206,7 +206,8 @@ class SetEncoder(json.JSONEncoder):
 mappings = {
              "topicLRTypeToItems" : topicLRTypeToItems,
              "topicLRTypeKCToItems" : topicLRTypeKCToItems,
-             "topicsToKCs" : topicsToKCs }
+             "topicsToKCs" : topicsToKCs,
+             "itemsToKCs" : itemsToKCs }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
                  "kcDifficulties" : kcDifficulties,
@@ -240,7 +241,7 @@ allData = { "actor" :{
 
 allDataJSON = json.dumps(allData,cls=SetEncoder)
 
-headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.1", 'Authorization' : str('Basic ' + basicAuth)}
+headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 
 r = requests.post(lrsURL,data=allDataJSON, headers=headers)
 
