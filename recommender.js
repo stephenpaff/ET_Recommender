@@ -367,15 +367,16 @@ getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDiffic
   var minDeviationItem = "";
   for(item in items){
     var kcsForItem = itemsToKCs[item];
-    var maxKCScore = 0;
+    var avgKCScore = 0;
+    var numKCs = 0;
     for(kc in kcsForItem){
       if(curUserData.kcScores.indexOf(kc)!= -1){
-        if(curUserData.kcScores[kc] > maxKCScore){
-          maxKCScore = curUserData.kcScores[kc];
-        }
+        avgKCScore += curUserData.kcScores[kc];
+        numKCs += 1;
       }
     }
-    var projectedPerformanceScore = maxKCScore;
+    avgKCScore = avgKCScore / numKCs;
+    var projectedPerformanceScore = avgKCScore;
     var itemDifficulty = itemDifficulties[item];
     var value = Math.pow(projectedPerformanceScore - itemDifficulty,2);
     if(value < minDeviation){
