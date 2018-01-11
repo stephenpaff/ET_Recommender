@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>Topic Summary Title</h1>
+<p>Topic Summary Text</p>
+
+<br />
+<button onclick="submitFinished()">Finish</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+
+function submitFinished() {
+  sendCompleted("Topic Summary","Topic Name");
+}
+
+</script>
+</html>

@@ -1,0 +1,55 @@
+
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>Please choose the answer below that best explains your reasoning.</h1><br>
+<table>
+  <form >
+    <tr><td><input type="radio" name="choice" value="answer1"> There is no switch in the circuit.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer2"> The battery is shorted by the wire connection.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer3"> The bulb is not connected to the circuit.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer4"> The circuit is open.</input></td></tr>
+  </form>
+</table>
+<br />
+<button onclick="submitAnswer()">Submit Answer</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+var answerCorrect = false;
+
+function submitAnswer() {
+  var radios = document.getElementsByName("choice");
+  var i = 0, len = radios.length;
+  var checked = false;
+  var userAnswer;
+
+  for( ; i < len; i++ ) {
+     if(radios[i].checked) {
+       checked = true;
+       userAnswer = radios[i].value;
+     }
+  }
+  // if user click submit button without selecting any option, alert box should be say "please select choice answer".
+  if(!checked) {
+    alert("Please select an answer");
+    return;
+  }
+  // Correct answer
+  if(userAnswer === "answer2") {
+     answerCorrect = true;
+  }else{
+    answerCorrect = false;
+  }
+
+  var kcScore = answerCorrect ? 0.5 : 0;
+  var firstCorrect = qs("correct");
+  kcScore = firstCorrect ? kcScore + 0.5 : kcScore;
+
+  sendKCScore("BEETLE","BEETLEQ2","Resistor Series Behavior",kcScore);
+}
+</script>
+</html>

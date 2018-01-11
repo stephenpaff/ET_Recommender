@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>If you want to light bulb A ONLY (not B or C), what should be the status of switches X and Y?</h1><br>
+<img src="img/BEETLEQ8Image.jpg">
+<table>
+  <form >
+    <tr><td><input type="radio" name="choice" value="answer1"> Both X and Y are closed.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer2"> Both X and Y are open.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer3"> X is closed; Y is open.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer4"> X is open; Y is closed.</input></td></tr>
+  </form>
+</table>
+<br />
+<button onclick="submitAnswer()">Submit Answer</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+
+function submitAnswer() {
+  var radios = document.getElementsByName("choice");
+  var i = 0, len = radios.length;
+  var checked = false;
+  var userAnswer;
+
+  for( ; i < len; i++ ) {
+     if(radios[i].checked) {
+       checked = true;
+       userAnswer = radios[i].value;
+     }
+  }
+  // if user click submit button without selecting any option, alert box should be say "please select choice answer".
+  if(!checked) {
+    alert("please select answer");
+    return;
+  }
+  var answerCorrect = false;
+  // Correct answer
+  if(userAnswer === "answer3") {
+    answerCorrect = true;
+  }else{
+    answerCorrect = false;
+  }
+
+  //Redirect to next part of question
+  window.location = "BEETLEQ8a.html" + window.location.search + "&correct=" + answerCorrect;
+}
+</script>
+</html>

@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>Please choose the answer below that best explains your reasoning.</h1><br>
+<img src="img/BEETLEQ8Image.jpg">
+<table>
+  <form >
+    <tr><td><input type="radio" name="choice" value="answer1"> An open switch Y will damage bulbs B and C, while a closed switch X will light bulb A.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer2"> An open switch Y will connect bulb A to the battery, while a closed switch X will disconnect bulb B and bulb C from the battery.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer3"> A closed switch X will light bulb A, while an open switch Y will disconnect bulbs B and C from the battery.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer4"> A closed switch X will skip bulbs B and C whether switch Y is open or not.</input></td></tr>
+  </form>
+</table>
+<br />
+<button onclick="submitAnswer()">Submit Answer</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+var answerCorrect = false;
+
+function submitAnswer() {
+  var radios = document.getElementsByName("choice");
+  var i = 0, len = radios.length;
+  var checked = false;
+  var userAnswer;
+
+  for( ; i < len; i++ ) {
+     if(radios[i].checked) {
+       checked = true;
+       userAnswer = radios[i].value;
+     }
+  }
+  // if user click submit button without selecting any option, alert box should be say "please select choice answer".
+  if(!checked) {
+    alert("Please select an answer");
+    return;
+  }
+  // Correct answer
+  if(userAnswer === "answer3") {
+     answerCorrect = true;
+  }else{
+    answerCorrect = false;
+  }
+
+  var kcScore = answerCorrect ? 0.5 : 0;
+  var firstCorrect = qs("correct");
+  kcScore = firstCorrect ? kcScore + 0.5 : kcScore;
+
+  sendKCScore("BEETLE","BEETLEQ8","Resistor Series Behavior,Resistor Parallel Behavior",kcScore);
+}
+</script>
+</html>

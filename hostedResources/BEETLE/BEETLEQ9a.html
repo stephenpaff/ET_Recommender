@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>Please choose the answer below that best explains your reasoning.</h1><br>
+<img src="img/BEETLEQ9Image.jpg">
+<table>
+  <form >
+    <tr><td><input type="radio" name="choice" value="answer1"> Switches X and Z need to be closed to close the paths through bulbs A and C.  An open switch Y will disconnect bulb B from the battery.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer2"> There are three closed paths in the circuits which are controlled by the switches X, Y, and Z.  To light bulbs A and C, we need to close switch X and Z, but not Y.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer3"> Switch X must be closed to close the path through bulb A. Closing either switch Y or switch Z will light bulb C. However, closing switch Y would also light bulb B.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer4"> Switches X and Z need to be closed to close the paths through bulbs A and C.  An open switch Y will burn bulb B.</input></td></tr>
+  </form>
+</table>
+<br />
+<button onclick="submitAnswer()">Submit Answer</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+var answerCorrect = false;
+
+function submitAnswer() {
+  var radios = document.getElementsByName("choice");
+  var i = 0, len = radios.length;
+  var checked = false;
+  var userAnswer;
+
+  for( ; i < len; i++ ) {
+     if(radios[i].checked) {
+       checked = true;
+       userAnswer = radios[i].value;
+     }
+  }
+  // if user click submit button without selecting any option, alert box should be say "please select choice answer".
+  if(!checked) {
+    alert("Please select an answer");
+    return;
+  }
+  // Correct answer
+  if(userAnswer === "answer1") {
+     answerCorrect = true;
+  }else{
+    answerCorrect = false;
+  }
+
+  var kcScore = answerCorrect ? 0.5 : 0;
+  var firstCorrect = qs("correct");
+  kcScore = firstCorrect ? kcScore + 0.5 : kcScore;
+
+  sendKCScore("BEETLE","BEETLEQ9","Resistor Series Behavior,Resistor Parallel Behavior",kcScore);
+}
+</script>
+</html>

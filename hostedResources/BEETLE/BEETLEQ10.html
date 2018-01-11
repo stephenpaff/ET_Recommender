@@ -1,0 +1,53 @@
+
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>In the figure below, if bulb B burns out, what do you think will happen to the other two bulbs?</h1><br>
+<img src="img/BEETLEQ10Image.jpg">
+<table>
+  <form >
+    <tr><td><input type="radio" name="choice" value="answer1"> Both bulbs A and C will be off.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer2"> Bulb C will be burned.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer3"> Bulb A will be off while bulb C is on.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer4"> Both bulbs A and C will be on.</input></td></tr>
+  </form>
+</table>
+<br />
+<button onclick="submitAnswer()">Submit Answer</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+
+function submitAnswer() {
+  var radios = document.getElementsByName("choice");
+  var i = 0, len = radios.length;
+  var checked = false;
+  var userAnswer;
+
+  for( ; i < len; i++ ) {
+     if(radios[i].checked) {
+       checked = true;
+       userAnswer = radios[i].value;
+     }
+  }
+  // if user click submit button without selecting any option, alert box should be say "please select choice answer".
+  if(!checked) {
+    alert("please select answer");
+    return;
+  }
+  var answerCorrect = false;
+  // Correct answer
+  if(userAnswer === "answer4") {
+    answerCorrect = true;
+  }else{
+    answerCorrect = false;
+  }
+
+  //Redirect to next part of question
+  window.location = "BEETLEQ10a.html" + window.location.search + "&correct=" + answerCorrect;
+}
+</script>
+</html>

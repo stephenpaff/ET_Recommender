@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>Question 2 Text</h1><br>
+<table>
+  <form >
+    <tr><td><input type="radio" name="choice" value="answer1"> Answer 1 Text</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer2"> Answer 2 Text</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer3"> Answer 3 Text</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer4"> Answer 4 Text</input></td></tr>
+  </form>
+</table>
+<br />
+<button onclick="submitAnswer()">Submit Answer</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+var answerCorrect = false;
+
+function submitAnswer() {
+  var radios = document.getElementsByName("choice");
+  var i = 0, len = radios.length;
+  var checked = false;
+  var userAnswer;
+
+  for( ; i < len; i++ ) {
+     if(radios[i].checked) {
+       checked = true;
+       userAnswer = radios[i].value;
+     }
+  }
+  // if user click submit button without selecting any option, alert box should be say "please select choice answer".
+  if(!checked) {
+    alert("please select answer");
+    return;
+  }
+  // Correct answer
+  if(userAnswer === "answer1") {
+     log("Answer is correct!");
+     answerCorrect = true;
+  }else{
+    log("Answer is incorrect");
+    answerCorrect = false;
+  }
+
+  var kcScore = answerCorrect ? 0.5 : 0;
+  var firstCorrect = qs("correct");
+  kcScore = firstCorrect ? kcScore + 0.5 : kcScore;
+
+  sendKCScore("BEETLE","BEETLEQ1","Resistor Series Behavior",kcScore);
+}
+
+</script>
+</html>

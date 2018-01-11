@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+
+<html>
+<body>
+<h1>Please choose the answer below that best explains your reasoning.</h1><br>
+<img src="img/BEETLEQ10Image.jpg">
+<table>
+  <form >
+    <tr><td><input type="radio" name="choice" value="answer1"> Bulb B will not be affected by the other two bulbs because they have a parallel connection.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer2"> There isn’t a closed path between bulb B and bulbs C or A.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer3"> Bulbs A and C make a closed path.</input></td></tr>
+    <tr><td><input type="radio" name="choice" value="answer4"> There is a closed path between bulb A and the battery.</input></td></tr>
+  </form>
+</table>
+<br />
+<button onclick="submitAnswer()">Submit Answer</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+var answerCorrect = false;
+
+function submitAnswer() {
+  var radios = document.getElementsByName("choice");
+  var i = 0, len = radios.length;
+  var checked = false;
+  var userAnswer;
+
+  for( ; i < len; i++ ) {
+     if(radios[i].checked) {
+       checked = true;
+       userAnswer = radios[i].value;
+     }
+  }
+  // if user click submit button without selecting any option, alert box should be say "please select choice answer".
+  if(!checked) {
+    alert("Please select an answer");
+    return;
+  }
+  // Correct answer
+  if(userAnswer === "answer1") {
+     answerCorrect = true;
+  }else{
+    answerCorrect = false;
+  }
+
+  var kcScore = answerCorrect ? 0.5 : 0;
+  var firstCorrect = qs("correct");
+  kcScore = firstCorrect ? kcScore + 0.5 : kcScore;
+
+  sendKCScore("BEETLE","BEETLEQ10","Resistor Parallel Behavior",kcScore);
+}
+</script>
+</html>
