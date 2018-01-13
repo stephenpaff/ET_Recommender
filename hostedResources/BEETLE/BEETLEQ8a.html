@@ -50,7 +50,8 @@ function submitAnswer() {
   var firstCorrect = qs("correct");
   kcScore = firstCorrect ? kcScore + 0.5 : kcScore;
 
-  sendKCScore("BEETLE","BEETLEQ8","Resistor Series Behavior,Resistor Parallel Behavior",kcScore);
+  var kcNamesAndScores = {"resistor_series_behavior":kcScore,"resistor_parallel_behavior":kcScore};
+  sendKCScore("BEETLE","BEETLEQ8",kcNamesAndScores);
 }
 </script>
 </html>

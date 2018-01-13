@@ -10,16 +10,20 @@
 <script type="text/javascript" src="./lib/xapiwrapper.js"></script>
 <script type="text/javascript" src="./hostedResources/lib/myxapiclient.js"></script>
 <body>
+  <textarea id="pipeline" rows="20" cols="100"></textarea>
   <button onclick="getRecords()">Start</button>
   <p id="log">Log: <br /></p>
+  <div width="100%">
+    <pre width="33%" id="jsonOutput"></pre>
+  </div>
 </body>
 <script>
 log = function(msg){
   console.log(msg);
   $("#log").append(msg + "<br />");
 }
-//var curStudentEmail = "mailto:andrew.tackett@gmail.com";
-var curStudentEmail = "mailto:xhu@memphis.edu";
+var curStudentEmail = "mailto:andrew.tackett@gmail.com";
+//var curStudentEmail = "mailto:xhu@memphis.edu";
 
 var getRecords = function(){
   log("Get Records");
@@ -34,6 +38,8 @@ var getKCScores = function(curStudentEmail){
   try{
     setAggAPIConfig();
     var search = ADL.XAPIWrapper.searchParamsAgg();
+    //search['pipeline'] = JSON.stringify(JSON.parse($("#pipeline").val()));
+
     search['pipeline'] = JSON.stringify([
       {
         "$match":
@@ -43,21 +49,47 @@ var getKCScores = function(curStudentEmail){
           ]}
       },
       {
-        "$project":
-        "kcs":"$statement.",
-        "scores":"$statement.",
+        "$project": {
+          "kc":"$statement.result.response",
+          "score":"$statement.result.score.scaled",
+          "lr_and_problemID":{
+              "$split": [{
+                "$arrayElemAt": ["$statement.context.contextActivities.other.definition.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle",0]
+              }, ":"]
+          }
+        }
+      },
+      {
+        "$project": {
+          "kc":"$kc",
+          "score":"$score",
+          "lr": {
+            "$arrayElemAt": ["$lr_and_problemID",0]
+          },
+          "problemID":{
+            "$arrayElemAt": ["$lr_and_problemID",1]
+          }
+        }
+      },
+      {
+        "$group":{
+          "_id" : "$kc",
+          "avg" : { "$avg" : "$score"},
+          "sum" : {"$sum" : "$score"},
+          "count" : {"$sum" : 1},
+          "stdDev" : {"$stdDevPop" : "$score"}
+        }
       }
     ]);
     var ret = ADL.XAPIWrapper.getStatementsAgg(search);
     if(ret){
       window.ret = ret;
+      $("#jsonOutput").innerHTML = JSON.stringify(ret, undefined, 2);
       return ret;
     }
   }catch(e){
     log("error getting records: " + e);
   }
 }
-
-
 </script>
 </html>

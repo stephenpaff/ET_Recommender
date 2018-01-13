@@ -6,6 +6,7 @@
 <script type="text/javascript" src="./lib/xapi-util.js"></script>
 <script type="text/javascript" src="./lib/xapistatement.js"></script>
 <script type="text/javascript" src="./lib/xapiwrapper.js"></script>
+<script src="./hostedResources/lib/myxapiclient.js"></script>
 <body>
   <p id="log">Log: <br /></p>
   <pre id="jsonOutput"></pre>
@@ -16,19 +17,10 @@ log = function(msg){
   $("#log").append(msg + "<br />");
 }
 
-setupConfig = function(err, launchdata, xAPIWrapper) {
-    if (!err) {
-      wrapper = ADL.XAPIWrapper = xAPIWrapper;
-      log("--- content launched via xAPI Launch ---\n" + wrapper.lrs + "\n" + launchdata);
-    } else {
-      wrapper = ADL.XAPIWrapper;
-      wrapper.changeConfig({
-      });
-      log("--- content statically configured ---\n" + JSON.stringify(wrapper.lrs));
-      var curStudentEmail = "mailto:xhu@memphis.edu";
-      log("recommendation: " + JSON.stringify(getRecommendation(curStudentEmail)));
-    }
-}
+setTimeout(function(){
+  var curStudentEmail = "mailto:xhu@memphis.edu";
+  log("recommendation: " + JSON.stringify(getRecommendation(curStudentEmail)));
+},1000);
 
 getRecommendation = function(curStudentEmail){
   log("getRecommendation start");
@@ -369,9 +361,6 @@ var getMappingsAndDifficulties = function(){
     log("error getting mappings and difficulties: " + e);
   }
 }
-
-var wrapper;
-ADL.launch(setupConfig, true);
 
 </script>
 </html>

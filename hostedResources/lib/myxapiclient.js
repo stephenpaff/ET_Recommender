@@ -8,13 +8,12 @@ setupConfig = function(err, launchdata, xAPIWrapper) {
       log("--- content launched via xAPI Launch ---");
     } else {
       wrapper = ADL.XAPIWrapper;
-      wrapper.changeConfig({
-      });
+      setRegAPIConfig();
       log("--- content statically configured ---");
     }
 }
 
-sendKCScore = function(learningResource,problemID,kcNames,kcScore){
+sendKCScore = function(learningResource,problemID,kcNamesAndScores){
   var vars = window.location.search.substring(1).split('&');
   var params = {}
   for (var i=0;i<vars.length;i++) {
@@ -25,39 +24,42 @@ sendKCScore = function(learningResource,problemID,kcNames,kcScore){
   var fullName = decodeURIComponent(params['fullname']);
   var SKOTitle = learningResource + ":" + problemID;
 
-  allData = {
-    "actor" :{
-      "mbox" : email,
-      "name" : fullName,
-      "objectType" : "Agent"
-    },
-    "verb" : {
-      "display": {
-        "en-US": "SaveKCScore"
+  for(var kcName in kcNamesAndScores){
+    var kcScore = kcNamesAndScores[kcName];
+    allData = {
+      "actor" :{
+        "mbox" : email,
+        "name" : fullName,
+        "objectType" : "Agent"
       },
-      "id": "https://umiis.github.io/ITSProfile/verbs/SaveKCScore"
-    },
-    "object": {
-      "objectType": "StatementRef",
-      "id": "80be9dae-f3c4-45ec-841d-1a5a2dcd4def"
-    },
-    "context": {
-      "extensions": {
-        "http://beetle.x-in-y.com/BT": QueryStringToJSON(SKOTitle)
-      }
-    },
-    "result": {
-      "response": kcNames,
-      "score": {
-        "raw": kcScore,
-        "max": 1,
-        "min": 0,
-        "scaled": kcScore
+      "verb" : {
+        "display": {
+          "en-US": "SaveKCScore"
+        },
+        "id": "https://umiis.github.io/ITSProfile/verbs/SaveKCScore"
+      },
+      "object": {
+        "objectType": "StatementRef",
+        "id": "80be9dae-f3c4-45ec-841d-1a5a2dcd4def"
+      },
+      "context": {
+        "extensions": {
+          "http://autotutor&46;x-in-y&46;com/AT": QueryStringToJSON(SKOTitle)
+        }
+      },
+      "result": {
+        "response": kcName,
+        "score": {
+          "raw": kcScore,
+          "max": 1,
+          "min": 0,
+          "scaled": kcScore
+        }
       }
     }
-  }
 
-  var ret = wrapper.sendStatement(allData);
+    var ret = wrapper.sendStatement(allData);
+  }
 }
 
 sendCompleted = function(learningResource,problemID){
@@ -89,7 +91,7 @@ sendCompleted = function(learningResource,problemID){
     },
     "context": {
       "extensions": {
-        "http://topicSummary.x-in-y.com/TS": QueryStringToJSON(SKOTitle)
+        "http://autotutor&46;x-in-y&46;com/AT": QueryStringToJSON(SKOTitle)
       }
     }
   }
