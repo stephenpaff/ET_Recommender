@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+
 <html>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script type="text/javascript" src="./lib/cryptojs_v3.1.2.js"></script>
@@ -6,8 +8,56 @@
 <script type="text/javascript" src="./lib/xapi-util.js"></script>
 <script type="text/javascript" src="./lib/xapistatement.js"></script>
 <script type="text/javascript" src="./lib/xapiwrapper.js"></script>
-<script type="text/javascript" src="./lib/ll-api-wrapper.js"></script>
+<script type="text/javascript" src="./hostedResources/lib/myxapiclient.js"></script>
 <body>
+  <button onclick="getRecords()">Start</button>
   <p id="log">Log: <br /></p>
 </body>
+<script>
+log = function(msg){
+  console.log(msg);
+  $("#log").append(msg + "<br />");
+}
+//var curStudentEmail = "mailto:andrew.tackett@gmail.com";
+var curStudentEmail = "mailto:xhu@memphis.edu";
+
+var getRecords = function(){
+  log("Get Records");
+  var kcScores = getKCScores(curStudentEmail);
+}
+
+var getMappingsAndDifficulties = function(){
+  log("getMappingsAndDifficulties");
+}
+
+var getKCScores = function(curStudentEmail){
+  try{
+    setAggAPIConfig();
+    var search = ADL.XAPIWrapper.searchParamsAgg();
+    search['pipeline'] = JSON.stringify([
+      {
+        "$match":
+          {"$and": [
+            {"statement.verb.id":"https://umiis.github.io/ITSProfile/verbs/SaveKCScore"},
+            {"statement.actor.mbox" : curStudentEmail}
+          ]}
+      },
+      {
+        "$project":
+        "kcs":"$statement.",
+        "scores":"$statement.",
+      }
+    ]);
+    var ret = ADL.XAPIWrapper.getStatementsAgg(search);
+    if(ret){
+      window.ret = ret;
+      return ret;
+    }
+  }catch(e){
+    log("error getting records: " + e);
+  }
+}
+
+
+</script>
 </html>

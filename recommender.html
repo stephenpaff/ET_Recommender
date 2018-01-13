@@ -6,8 +6,372 @@
 <script type="text/javascript" src="./lib/xapi-util.js"></script>
 <script type="text/javascript" src="./lib/xapistatement.js"></script>
 <script type="text/javascript" src="./lib/xapiwrapper.js"></script>
-<script src="recommender.js"></script>
 <body>
   <p id="log">Log: <br /></p>
+  <pre id="jsonOutput"></pre>
 </body>
+<script>
+log = function(msg){
+  console.log(msg);
+  $("#log").append(msg + "<br />");
+}
+
+setupConfig = function(err, launchdata, xAPIWrapper) {
+    if (!err) {
+      wrapper = ADL.XAPIWrapper = xAPIWrapper;
+      log("--- content launched via xAPI Launch ---\n" + wrapper.lrs + "\n" + launchdata);
+    } else {
+      wrapper = ADL.XAPIWrapper;
+      wrapper.changeConfig({
+      });
+      log("--- content statically configured ---\n" + JSON.stringify(wrapper.lrs));
+      var curStudentEmail = "mailto:xhu@memphis.edu";
+      log("recommendation: " + JSON.stringify(getRecommendation(curStudentEmail)));
+    }
+}
+
+getRecommendation = function(curStudentEmail){
+  log("getRecommendation start");
+
+  var recommendation = "";
+
+  var mappingsAndDifficulties = getMappingsAndDifficulties();
+
+  var curUserData = populateUpdateCurUserData(curStudentEmail,mappingsAndDifficulties);
+
+
+  if(!!curUserData){
+    recommendations = {};
+    for(var func in recommendationRules){
+      recommendations[func] = recommendationRules[func](curUserData,mappingsAndDifficulties);
+    }
+    console.log(JSON.stringify(recommendations));
+    return null;
+  }else{
+    log("couldn't get data from LRS");
+  }
+
+  log("after main body");
+
+  //TODO: Default recommendation code
+}
+
+topicMasteryThreshold = 0.7;
+lowTopicMasteryThreshold = 0.3
+
+getKCScores = function(curStudentEmail){
+  //TODO
+  var kcScores = {
+    'zener_diode_physics' : 0.1,
+    'cb_transistor_amplifier_ac_behavior' : 0.2,
+    'ce_transistor_behavior' : 0.3,
+    'cb_transistor_amplifier_function' : 0.2,
+    'resistor_series_behavior' : 0.2,
+    'ce_transistor_fixed_bias_behavior' : 0.2,
+    'resistance_structure' : 0.2,
+    'resistor_capacitor_in_series_behavior' : 0.2,
+    'inductor_behavior' : 0.2,
+    'in_parallel_and_series_structure' : 0.2,
+    'generator_behavior' : 0.6,
+    'power_supply_function' : 0.8,
+    'ohms_law_voltage' : 1.0
+  };
+
+  return kcScores;
+}
+
+//Update and store calculated attributes
+populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
+  curUserData = {};
+  var KCsToTopics = mappingsAndDifficulties['mappings']['KCsToTopics'];
+  var KCsToTopicLRType = mappingsAndDifficulties['mappings']['KCsToTopicLRType'];
+  var topicsToKCs = mappingsAndDifficulties['mappings']['topicsToKCs'];
+  var topicLRTypeToKCs = mappingsAndDifficulties['mappings']['topicLRTypeToKCs'];
+
+  window.kcttlr = KCsToTopicLRType;
+
+  var kcScores = getKCScores(curStudentEmail);
+  var topicScores = {};
+  var topicLRTypeScores = {};
+
+  for(kc in kcScores){
+    for(index in KCsToTopics[kc]){
+      var topic = KCsToTopics[kc][index];
+      if(!(topic in topicScores)){
+        topicScores[topic] = 0;
+      }
+      topicScores[topic] += kcScores[kc];
+    }
+    for(index in KCsToTopicLRType[kc]){
+      var topicLRType = KCsToTopicLRType[kc][index];
+      if(!(topicLRType in topicLRTypeScores)){
+        topicLRTypeScores[topicLRType] = 0;
+      }
+      topicLRTypeScores[topicLRType] += kcScores[kc];
+    }
+  }
+  window.ts = topicScores;
+  //Average by number of kcs, which has the effect of counting nonappearing KC
+  //performance scores as 0 weighting
+  for(var topic in topicScores){
+    topicScores[topic] /= topicsToKCs[topic].length;
+  }
+
+  for(topicLRType in topicLRTypeScores){
+    topicLRTypeScores[topicLRType] /= topicLRTypeToKCs[topicLRType].length;
+  }
+
+  curUserData["topicScores"] = topicScores;
+  curUserData["topicLRTypeScores"] = topicLRTypeScores;
+  curUserData["kcScores"] = kcScores;
+
+  //TODO generate from data
+  curUserData["lastTopic"] = "filter";
+  //TODO generate from data
+  curUserData["belowProcessingTimeThreshold"] = true;
+  $("#jsonOutput").append(JSON.stringify(curUserData) + "<br />");
+  return curUserData;
+}
+
+//Variables to hold the specific strings associated with various LR Types in the data
+var ATDRC = "autotutor deep reasoning conversations";
+var CB = "circuit basics";
+var CR = "circuit reasoning";
+var ATKCC = "autotutor knowledge check conversations";
+var DRAGOON = "dragoon modeling";
+var EL = "electronic laws";
+var TS = "topic summary";
+
+recommendationRules = {
+    repeatingTopics : function(curUserData,mappingsAndDifficulties){
+      log("repeatingTopics");
+      var recommendations = [];
+
+      for(var topic in curUserData.topicScores){
+        if(curUserData.topicScores[topic] < topicMasteryThreshold){
+          //find AT DR Question associate with topic, select randomly, apply
+          //branching to LR and Items within topic of the day
+          topicLRType = topic + "," + ATDRC;
+          getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+        }
+      }
+
+      return recommendations;
+    },
+    focusOnUnderperformingKCs : function(curUserData,mappingsAndDifficulties){
+      log("focusOnUnderperformingKCs");
+      var recommendations = [];
+      var subThresholdKCsAndTopics = [];
+
+      for(var topic in curUserData.topicScores){
+        if(lowTopicMasteryThreshold < curUserData.topicScores[topic] < topicMasteryThreshold){
+          topicsToKCs = mappingsAndDifficulties["mappings"]["topicsToKCs"];
+          //log("topic: " + topic);
+          var KCs = topicsToKCs[topic];
+          for(index in KCs){
+            var kc = KCs[index];
+            if(curUserData.kcScores[kc] < topicMasteryThreshold){
+              //log("subThresholdKC: " + kc);
+              subThresholdKCsAndTopics.push([kc,topic]);
+            }
+          }
+        }
+      }
+      if(subThresholdKCsAndTopics.length > 0){
+        log("subThresholdKCsAndTopics: " + JSON.stringify(subThresholdKCsAndTopics));
+        var kcAndTopic = getRandomArrayValue(subThresholdKCsAndTopics);
+        var chosenKC = kcAndTopic[0];
+        var topic = kcAndTopic[1];
+
+        var mapping = mappingsAndDifficulties["mappings"]["topicLRTypeKCToItems"];
+
+        //Assign items from AT Convo w/Knowledge Check questions or Circuit Reasoning items
+        var itemsToChooseFrom = [];
+        var index = topic + "," + ATKCC + "," + chosenKC;
+        for(item in mapping[index]){
+          var recommendation = topic + "," + ATKCC + "," + mapping[index][item];
+          itemsToChooseFrom.push(recommendation);
+        }
+        index = topic + "," + CR + "," + chosenKC;
+        for(item in mapping[index]){
+          var recommendation = topic + "," + CR + "," + mapping[index][item];
+          itemsToChooseFrom.push(recommendation)
+        }
+
+        log("itemsToChooseFrom: " + JSON.stringify(itemsToChooseFrom));
+        if(itemsToChooseFrom.length > 3){
+          for(i=0;i<3;i++){
+            recommendations.push(getRandomArrayValue(itemsToChooseFrom));
+          }
+        }else{
+            for(i=0;i<itemsToChooseFrom.length;i++){
+              recommendations.push(itemsToChooseFrom[i]);
+            }
+        }
+
+        return recommendations;
+      }else{
+        return null;
+      }
+    },
+    pushingTheEnvelope : function(curUserData,mappingsAndDifficulties){
+      log("pushingTheEnvelope");
+      var recommendations = [];
+      var mapping = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"];
+
+      for(var topic in curUserData.topicScores){
+        if(curUserData.topicScores[topic] > topicMasteryThreshold){//a)
+            //look for whether user has been assigned items from LRs: AT DR Convos, CR Items, or Dragoon items
+            //if not then recommend that LR
+            var topicLRType = topic + "," + ATDRC;
+            if(!curUserData.topicLRTypeScores[topicLRType]){
+              getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+            }
+            topicLRType = topic + "," + CR;
+            if(!curUserData.topicLRTypeScores[topicLRType]){
+              getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+            }
+            topicLRType = topic + "," + DRAGOON;
+            if(!curUserData.topicLRTypeScores[topicLRType]){
+              getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+            }
+        }
+      }
+
+      //b) look for LR with scores less than topicMasteryThreshold ->
+      //recommend AT DR Convos, Circuit Reasoning items, or Dragoon items
+      var topicLRType = curUserData.lastTopic + "," + ATDRC;
+      getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+      topicLRType = curUserData.lastTopic + "," + CR;
+      getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+      topicLRType = curUserData.lastTopic + "," + DRAGOON;
+      getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+
+      return recommendations;
+    },
+    motivatedBottomDweller : function(curUserData,mappingsAndDifficulties){
+      var recommendations = [];
+
+      //Recommend one of the following Learning Resources if the student’s time
+      //on tasks meets or exceeds some processing time threshold but their performance
+      //on a previous topic was below a low threshold .3:
+      //AutoTutor Knowledge Check Conversation questions, Circuit Basics, and Electronics Laws.
+      if(curUserData.topicScores[curUserData.lastTopic] < lowTopicMasteryThreshold){
+        if(!curUserData.belowProcessingTimeThreshold){
+          var topicLRType = curUserData.lastTopic + ",";
+          switch(getRandomNumber(3)){
+            case 0:
+              topicLRType += ATKCC;
+              break;
+            case 1:
+              topicLRType += CB;
+              break;
+            case 2:
+              topicLRType += EL;
+              break;
+          }
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
+        }
+      }
+
+      return recommendations;
+    },
+    unmotivatedBottomDweller : function(curUserData,mappingsAndDifficulties){
+      var recommendations = [];
+
+      //Recommend one of the following Learning Resources if the student’s time
+      //on tasks was below the processing time thresholds and the student’s performance
+      //on previous topics was below .3: Topic Summary, Circuit Basics, or Electronics Laws.
+      if(curUserData.topicScores[curUserData.lastTopic] < lowTopicMasteryThreshold){
+        if(curUserData.belowProcessingTimeThreshold){
+          var topicLRType = curUserData.lastTopic + ",";
+          switch(getRandomNumber(3)){
+            case 0:
+              topicLRType += TS;
+              break;
+            case 1:
+              topicLRType += CB;
+              break;
+            case 2:
+              topicLRType += EL;
+              break;
+          }
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
+        }
+      }
+    }
+}
+
+getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDifficulties, recommendationsArr){
+  log("getItemFromTopicLRTypeWithZPDAlgorithm");
+  var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType];
+  var itemDifficulties = mappingsAndDifficulties["difficulties"]["itemDifficulties"];
+  var kcDifficulties = mappingsAndDifficulties["difficulties"]["kcDifficulties"];
+  var itemsToKCs = mappingsAndDifficulties["mappings"]["itemsToKCs"];
+  var minDeviation = Number.MAX_VALUE;
+  var minDeviationItem = "";
+  for(item in items){
+    var kcsForItem = itemsToKCs[item];
+    var avgKCScore = 0;
+    var numKCs = 0;
+    for(kc in kcsForItem){
+      if(curUserData.kcScores.indexOf(kc)!= -1){
+        avgKCScore += curUserData.kcScores[kc];
+        numKCs += 1;
+      }
+    }
+    avgKCScore = avgKCScore / numKCs;
+    var projectedPerformanceScore = avgKCScore;
+    var itemDifficulty = itemDifficulties[item];
+    var value = Math.pow(projectedPerformanceScore - itemDifficulty,2);
+    if(value < minDeviation){
+      minDeviation = value;
+      minDeviationItem = item;
+    }
+  }
+  var recommendation = topicLRType + "," + minDeviationItem;
+  recommendationsArr.push(recommendation);
+}
+
+getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,recommendationsArr){
+  log("getRandomItemFromTopicLRType: " + topicLRType);
+  var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType]
+  if(!!items && items.length > 0){
+    var recommendation = topicLRType + "," + getRandomArrayValue(items);
+    recommendationsArr.push(recommendation);
+  }
+}
+
+//getProcessingTimeThresholdFor
+getRandomArrayValue = function(arr){
+  return arr[getRandomNumber(arr.length)];
+}
+
+getRandomNumber = function(max){
+  return Math.floor(Math.random() * max);
+}
+
+var getMappingsAndDifficulties = function(){
+  log("getMappingsAndDifficulties");
+  try{
+    var search = ADL.XAPIWrapper.searchParams();
+    search['verb'] = "https://umiis.github.io/ITSProfile/System/Store_Data";
+    search['agent'] = JSON.stringify({"mbox":"mailto:data@electronixtutor.com","objectType":"Agent"});
+    search['limit'] = 1;
+    var ret = ADL.XAPIWrapper.getStatements(search);
+    if(ret){
+      window.returnval = ret;
+      var mappingsAndDifficulties = ret['statements'][0]['context']["extensions"]["https://umiis.github.io/ITSProfile/System/Data"];
+      window.mappingsAndDifficulties = mappingsAndDifficulties;
+      return mappingsAndDifficulties;
+    }
+  }catch(e){
+    log("error getting mappings and difficulties: " + e);
+  }
+}
+
+var wrapper;
+ADL.launch(setupConfig, true);
+
+</script>
 </html>

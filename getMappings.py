@@ -50,7 +50,7 @@ for topic in dictAll:
             for kc in dictAll[topic][learningResource][item]:
                 topicsToKCs[topic].add(kc)
 
-KCsToTopics = {}
+KCsToTopics = {} #Used
 for topic in dictAll:
     for learningResource in dictAll[topic]:
         for item in dictAll[topic][learningResource]:
@@ -58,6 +58,26 @@ for topic in dictAll:
                 if kc not in KCsToTopics:
                     KCsToTopics[kc] = set()
                 KCsToTopics[kc].add(topic)
+
+topicLRTypeToKCs = {} #Used
+for topic in dictAll:
+    for learningResource in dictAll[topic]:
+        topicLRType = topic + "," + list(lrToLRType[learningResource])[0]
+        if topicLRType not in topicLRTypeToKCs:
+            topicLRTypeToKCs[topicLRType] = set()
+        for item in dictAll[topic][learningResource]:
+            for kc in dictAll[topic][learningResource][item]:
+                topicLRTypeToKCs[topicLRType].add(kc)
+
+KCsToTopicLRType = {} #Used
+for topic in dictAll:
+    for learningResource in dictAll[topic]:
+        topicLRType = topic + "," + list(lrToLRType[learningResource])[0]
+        for item in dictAll[topic][learningResource]:
+            for kc in dictAll[topic][learningResource][item]:
+                if kc not in KCsToTopicLRType:
+                    KCsToTopicLRType[kc] = set()
+                KCsToTopicLRType[kc].add(topicLRType)
 
 itemsToKCs = {} #Used
 for topic in dictAll:
@@ -71,7 +91,7 @@ for topic in dictAll:
 topicLRTypeToItems = {} #Used
 for topic in dictAll:
     for learningResource in dictAll[topic]:
-        pair = topic + "," + list(lrToLRType[learningResource])[0];
+        pair = topic + "," + list(lrToLRType[learningResource])[0]
         if pair not in topicLRTypeToItems:
             topicLRTypeToItems[pair] = set()
         for item in dictAll[topic][learningResource]:
@@ -207,7 +227,10 @@ mappings = {
              "topicLRTypeToItems" : topicLRTypeToItems,
              "topicLRTypeKCToItems" : topicLRTypeKCToItems,
              "topicsToKCs" : topicsToKCs,
-             "itemsToKCs" : itemsToKCs }
+             "itemsToKCs" : itemsToKCs,
+             "KCsToTopics" : KCsToTopics,
+             "KCsToTopicLRType" : KCsToTopicLRType,
+             "topicLRTypeToKCs" : topicLRTypeToKCs }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
                  "kcDifficulties" : kcDifficulties,
