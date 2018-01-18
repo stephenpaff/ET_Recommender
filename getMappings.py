@@ -88,6 +88,14 @@ for topic in dictAll:
             for kc in dictAll[topic][learningResource][item]:
                 itemsToKCs[item].add(kc)
 
+itemsToTopics = {} #Used
+for topic in dictAll:
+    for learningResource in dictAll[topic]:
+        for item in dictAll[topic][learningResource]:
+            if item not in itemsToTopics:
+                itemsToTopics[item] = set()
+            itemsToTopics[item].add(topic)
+
 topicLRTypeToItems = {} #Used
 for topic in dictAll:
     for learningResource in dictAll[topic]:
@@ -130,21 +138,21 @@ for topic in dictAll:
 #     LRTypeToItems[lrType].add(item)
 
 topicDifficulties = {
-"Ohm's Law & Kirchhoff’s Law".lower():1,
-'Series & Parallel Circuit'.lower():2,
-'Series/Parallel Combination'.lower():3,
-'Filter'.lower():3,
-'PN Junction'.lower():2,
-'Rectifier'.lower():3,
-'Power Supply'.lower():4,
-'Diode Limiter & Clamper'.lower():3,
-'Zener Diode & Regulator'.lower():4,
-'Transistor'.lower():3,
-'CE Amplifier'.lower():4,
-'CC Amplifier'.lower():5,
-'CB Amplifier'.lower():5,
-'Multistage Amplifier'.lower():6,
-'PushPull Amplifier'.lower():6
+    "Ohm's Law & Kirchhoff’s Law".lower():1,
+    'Series & Parallel Circuit'.lower():2,
+    'Series/Parallel Combination'.lower():3,
+    'Filter'.lower():3,
+    'PN Junction'.lower():2,
+    'Rectifier'.lower():3,
+    'Power Supply'.lower():4,
+    'Diode Limiter & Clamper'.lower():3,
+    'Zener Diode & Regulator'.lower():4,
+    'Transistor'.lower():3,
+    'CE Amplifier'.lower():4,
+    'CC Amplifier'.lower():5,
+    'CB Amplifier'.lower():5,
+    'Multistage Amplifier'.lower():6,
+    'PushPull Amplifier'.lower():6
 }
 
 #Rescale to 0 to 1
@@ -228,6 +236,7 @@ mappings = {
              "topicLRTypeKCToItems" : topicLRTypeKCToItems,
              "topicsToKCs" : topicsToKCs,
              "itemsToKCs" : itemsToKCs,
+             "itemsToTopics" : itemsToTopics,
              "KCsToTopics" : KCsToTopics,
              "KCsToTopicLRType" : KCsToTopicLRType,
              "topicLRTypeToKCs" : topicLRTypeToKCs }
@@ -263,6 +272,10 @@ allData = { "actor" :{
 }
 
 allDataJSON = json.dumps(allData,cls=SetEncoder)
+
+#lrsURl =
+#basicAuth =
+
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 

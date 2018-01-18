@@ -18,7 +18,7 @@ log = function(msg){
 }
 
 setTimeout(function(){
-  var curStudentEmail = "mailto:xhu@memphis.edu";
+  var curStudentEmail = "mailto:andrew.tackett@gmail.com";
   log("recommendation: " + JSON.stringify(getRecommendation(curStudentEmail)));
 },1000);
 
@@ -51,25 +51,110 @@ getRecommendation = function(curStudentEmail){
 topicMasteryThreshold = 0.7;
 lowTopicMasteryThreshold = 0.3
 
-getKCScores = function(curStudentEmail){
-  //TODO
-  var kcScores = {
-    'zener_diode_physics' : 0.1,
-    'cb_transistor_amplifier_ac_behavior' : 0.2,
-    'ce_transistor_behavior' : 0.3,
-    'cb_transistor_amplifier_function' : 0.2,
-    'resistor_series_behavior' : 0.2,
-    'ce_transistor_fixed_bias_behavior' : 0.2,
-    'resistance_structure' : 0.2,
-    'resistor_capacitor_in_series_behavior' : 0.2,
-    'inductor_behavior' : 0.2,
-    'in_parallel_and_series_structure' : 0.2,
-    'generator_behavior' : 0.6,
-    'power_supply_function' : 0.8,
-    'ohms_law_voltage' : 1.0
-  };
+// getKCScores = function(curStudentEmail){
+//   //TODO
+//   var kcScores = {
+//     'zener_diode_physics' : 0.1,
+//     'cb_transistor_amplifier_ac_behavior' : 0.2,
+//     'ce_transistor_behavior' : 0.3,
+//     'cb_transistor_amplifier_function' : 0.2,
+//     'resistor_series_behavior' : 0.2,
+//     'ce_transistor_fixed_bias_behavior' : 0.2,
+//     'resistance_structure' : 0.2,
+//     'resistor_capacitor_in_series_behavior' : 0.2,
+//     'inductor_behavior' : 0.2,
+//     'in_parallel_and_series_structure' : 0.2,
+//     'generator_behavior' : 0.6,
+//     'power_supply_function' : 0.8,
+//     'ohms_law_voltage' : 1.0
+//   };
+//
+//   return kcScores;
+// }
 
-  return kcScores;
+
+
+var getMappingsAndDifficulties = function(){
+  log("getMappingsAndDifficulties");
+  try{
+    var search = ADL.XAPIWrapper.searchParams();
+    search['verb'] = "https://umiis.github.io/ITSProfile/System/Store_Data";
+    search['agent'] = JSON.stringify({"mbox":"mailto:data@electronixtutor.com","objectType":"Agent"});
+    search['limit'] = 1;
+    var ret = ADL.XAPIWrapper.getStatements(search);
+    if(ret){
+      window.returnval = ret;
+      var mappingsAndDifficulties = ret['statements'][0]['context']["extensions"]["https://umiis.github.io/ITSProfile/System/Data"];
+      window.mappingsAndDifficulties = mappingsAndDifficulties;
+      return mappingsAndDifficulties;
+    }
+  }catch(e){
+    log("error getting mappings and difficulties: " + e);
+  }
+}
+
+var getLastTopic = function(curStudentEmail,mappingsAndDifficulties){
+  var itemsToTopics = mappingsAndDifficulties["mappings"]["itemsToTopics"];
+  setRegAPIConfig();
+  var search = ADL.XAPIWrapper.searchParams();
+  search['verb'] = "https://umiis.github.io/ITSProfile/verbs/SaveKCScore";
+  search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
+  search['limit'] = 1;
+  var ret = ADL.XAPIWrapper.getStatements(search);
+  var lastItem = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":")[1].toLowerCase();
+  var lastTopic = itemsToTopics[lastItem];
+  console.log("last item: " + lastItem + ", last topic: " + lastTopic);
+
+  return lastTopic;
+}
+
+var getProcessingTimeThreshold = function(curStudentEmail){
+  return false;
+  //TODO
+}
+
+getKCScores = function(curStudentEmail){
+  try{
+    setAggAPIConfig();
+    var search = ADL.XAPIWrapper.searchParamsAgg();
+
+    search['pipeline'] = JSON.stringify([
+      {
+        "$match":
+          {"$and": [
+            {"statement.verb.id":"https://umiis.github.io/ITSProfile/verbs/SaveKCScore"},
+            {"statement.actor.mbox" : curStudentEmail}
+          ]}
+      },
+      {
+        "$project": {
+          "kc":"$statement.result.response",
+          "score":"$statement.result.score.scaled",
+        }
+      },
+      {
+        "$group":{
+          "_id" : "$kc",
+          "avg" : { "$avg" : "$score"}
+        }
+      }
+    ]);
+
+    var ret = ADL.XAPIWrapper.getStatementsAgg(search);
+    if(ret){
+      window.ret = ret;
+      var kcScores = {};
+      for(var index in ret){
+        var name = ret[index]["_id"];
+        var score = ret[index]["avg"];
+        kcScores[name] = score;
+      }
+      window.kcScores = kcScores;
+      return kcScores;
+    }
+  }catch(e){
+    log("error getting records: " + e);
+  }
 }
 
 //Update and store calculated attributes
@@ -118,9 +203,9 @@ populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
   curUserData["kcScores"] = kcScores;
 
   //TODO generate from data
-  curUserData["lastTopic"] = "filter";
+  curUserData["lastTopic"] = getLastTopic(curStudentEmail,mappingsAndDifficulties);//"filter";
   //TODO generate from data
-  curUserData["belowProcessingTimeThreshold"] = true;
+  curUserData["belowProcessingTimeThreshold"] = getProcessingTimeThreshold(curStudentEmail);
   $("#jsonOutput").append(JSON.stringify(curUserData) + "<br />");
   return curUserData;
 }
@@ -291,6 +376,8 @@ recommendationRules = {
           getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
         }
       }
+
+      return recommendations;
     }
 }
 
@@ -334,32 +421,12 @@ getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,reco
   }
 }
 
-//getProcessingTimeThresholdFor
 getRandomArrayValue = function(arr){
   return arr[getRandomNumber(arr.length)];
 }
 
 getRandomNumber = function(max){
   return Math.floor(Math.random() * max);
-}
-
-var getMappingsAndDifficulties = function(){
-  log("getMappingsAndDifficulties");
-  try{
-    var search = ADL.XAPIWrapper.searchParams();
-    search['verb'] = "https://umiis.github.io/ITSProfile/System/Store_Data";
-    search['agent'] = JSON.stringify({"mbox":"mailto:data@electronixtutor.com","objectType":"Agent"});
-    search['limit'] = 1;
-    var ret = ADL.XAPIWrapper.getStatements(search);
-    if(ret){
-      window.returnval = ret;
-      var mappingsAndDifficulties = ret['statements'][0]['context']["extensions"]["https://umiis.github.io/ITSProfile/System/Data"];
-      window.mappingsAndDifficulties = mappingsAndDifficulties;
-      return mappingsAndDifficulties;
-    }
-  }catch(e){
-    log("error getting mappings and difficulties: " + e);
-  }
 }
 
 </script>
