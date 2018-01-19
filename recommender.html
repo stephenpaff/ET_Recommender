@@ -12,13 +12,16 @@
   <pre id="jsonOutput"></pre>
 </body>
 <script>
+var debug = true;
 log = function(msg){
-  console.log(msg);
-  $("#log").append(msg + "<br />");
+  if(debug){
+    console.log(msg);
+    $("#log").append(msg + "<br />");
+  }
 }
 
 setTimeout(function(){
-  var curStudentEmail = "mailto:andrew.tackett@gmail.com";
+  var curStudentEmail = "mailto:xahu@memphis.edu";//"mailto:andrew.tackett@gmail.com";
   log("recommendation: " + JSON.stringify(getRecommendation(curStudentEmail)));
 },1000);
 
@@ -37,7 +40,7 @@ getRecommendation = function(curStudentEmail){
     for(var func in recommendationRules){
       recommendations[func] = recommendationRules[func](curUserData,mappingsAndDifficulties);
     }
-    console.log(JSON.stringify(recommendations));
+    log(JSON.stringify(recommendations));
     return null;
   }else{
     log("couldn't get data from LRS");
@@ -51,29 +54,6 @@ getRecommendation = function(curStudentEmail){
 topicMasteryThreshold = 0.7;
 lowTopicMasteryThreshold = 0.3
 
-// getKCScores = function(curStudentEmail){
-//   //TODO
-//   var kcScores = {
-//     'zener_diode_physics' : 0.1,
-//     'cb_transistor_amplifier_ac_behavior' : 0.2,
-//     'ce_transistor_behavior' : 0.3,
-//     'cb_transistor_amplifier_function' : 0.2,
-//     'resistor_series_behavior' : 0.2,
-//     'ce_transistor_fixed_bias_behavior' : 0.2,
-//     'resistance_structure' : 0.2,
-//     'resistor_capacitor_in_series_behavior' : 0.2,
-//     'inductor_behavior' : 0.2,
-//     'in_parallel_and_series_structure' : 0.2,
-//     'generator_behavior' : 0.6,
-//     'power_supply_function' : 0.8,
-//     'ohms_law_voltage' : 1.0
-//   };
-//
-//   return kcScores;
-// }
-
-
-
 var getMappingsAndDifficulties = function(){
   log("getMappingsAndDifficulties");
   try{
@@ -83,9 +63,8 @@ var getMappingsAndDifficulties = function(){
     search['limit'] = 1;
     var ret = ADL.XAPIWrapper.getStatements(search);
     if(ret){
-      window.returnval = ret;
       var mappingsAndDifficulties = ret['statements'][0]['context']["extensions"]["https://umiis.github.io/ITSProfile/System/Data"];
-      window.mappingsAndDifficulties = mappingsAndDifficulties;
+      log(JSON.stringify(mappingsAndDifficulties));
       return mappingsAndDifficulties;
     }
   }catch(e){
@@ -94,23 +73,75 @@ var getMappingsAndDifficulties = function(){
 }
 
 var getLastTopic = function(curStudentEmail,mappingsAndDifficulties){
-  var itemsToTopics = mappingsAndDifficulties["mappings"]["itemsToTopics"];
-  setRegAPIConfig();
-  var search = ADL.XAPIWrapper.searchParams();
-  search['verb'] = "https://umiis.github.io/ITSProfile/verbs/SaveKCScore";
-  search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
-  search['limit'] = 1;
-  var ret = ADL.XAPIWrapper.getStatements(search);
-  var lastItem = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":")[1].toLowerCase();
-  var lastTopic = itemsToTopics[lastItem];
-  console.log("last item: " + lastItem + ", last topic: " + lastTopic);
+  try{
+    var itemsToTopics = mappingsAndDifficulties["mappings"]["itemsToTopics"];
+    setRegAPIConfig();
+    var search = ADL.XAPIWrapper.searchParams();
+    search['verb'] = "https://umiis.github.io/ITSProfile/verbs/SaveKCScore";
+    search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
+    search['limit'] = 1;
+    var ret = ADL.XAPIWrapper.getStatements(search);
+    var lastItem = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":")[1].toLowerCase();
+    var lastTopic = itemsToTopics[lastItem];
+    log("last item: " + lastItem + ", last topic: " + lastTopic);
 
-  return lastTopic;
+    return lastTopic;
+  }catch(e){
+    log("Error getting last topic: " + e);
+    //Default last topic in case we can't find one or error out
+    return "Ohm's Law & Kirchhoff’s Law"
+  }
 }
 
-var getProcessingTimeThreshold = function(curStudentEmail){
-  return false;
-  //TODO
+var checkBelowProcessingTimeThreshold = function(curStudentEmail,mappingsAndDifficulties){
+  try{
+    var itemProcessingThresholds = mappingsAndDifficulties['mappings']['itemProcessingThresholds'];
+    setAggAPIConfig();
+    var search = ADL.XAPIWrapper.searchParamsAgg();
+
+    search['pipeline'] = JSON.stringify([
+      {
+        "$match":
+          {"$and": [
+            {"statement.verb.id":"https://umiis.github.io/ITSProfile/verbs/SaveKCScore"},
+            {"statement.actor.mbox" : curStudentEmail}
+          ]}
+      },
+      {
+        "$project": {
+          "timeTaken":"$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.timeTaken",
+          "item" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]}
+        }
+      },
+       {"$group" : {
+               "_id" : "$item",
+               "timeTaken" : {"$avg" : "$timeTaken" }
+           }
+       }
+    ]);
+
+    var ret = ADL.XAPIWrapper.getStatementsAgg(search);
+    if(ret){
+      var numAboveThreshold = 0;
+      var numBelowThreshold = 0;
+      for(index in ret){
+        var item = ret[index]['_id'].toLowerCase();
+        var timeTaken = ret[index]['timeTaken'];
+        var processingTimeThreshold = itemProcessingThresholds[item];
+        log("item: " + item + ", timeTaken: " + timeTaken + ", threshold: " + processingTimeThreshold);
+        if(timeTaken > processingTimeThreshold){
+          numAboveThreshold += 1;
+        }else{
+          numBelowThreshold += 1;
+        }
+      }
+      var onAvgBelowProcessingThreshold = numBelowThreshold > numAboveThreshold;
+      log("Below processing threshold: " + onAvgBelowProcessingThreshold);
+      return onAvgBelowProcessingThreshold;
+    }
+  }catch(e){
+    log("error getting records: " + e);
+  }
 }
 
 getKCScores = function(curStudentEmail){
@@ -142,14 +173,13 @@ getKCScores = function(curStudentEmail){
 
     var ret = ADL.XAPIWrapper.getStatementsAgg(search);
     if(ret){
-      window.ret = ret;
       var kcScores = {};
       for(var index in ret){
         var name = ret[index]["_id"];
         var score = ret[index]["avg"];
         kcScores[name] = score;
       }
-      window.kcScores = kcScores;
+      log("kcScores: " + JSON.stringify(kcScores));
       return kcScores;
     }
   }catch(e){
@@ -164,8 +194,6 @@ populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
   var KCsToTopicLRType = mappingsAndDifficulties['mappings']['KCsToTopicLRType'];
   var topicsToKCs = mappingsAndDifficulties['mappings']['topicsToKCs'];
   var topicLRTypeToKCs = mappingsAndDifficulties['mappings']['topicLRTypeToKCs'];
-
-  window.kcttlr = KCsToTopicLRType;
 
   var kcScores = getKCScores(curStudentEmail);
   var topicScores = {};
@@ -187,7 +215,6 @@ populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
       topicLRTypeScores[topicLRType] += kcScores[kc];
     }
   }
-  window.ts = topicScores;
   //Average by number of kcs, which has the effect of counting nonappearing KC
   //performance scores as 0 weighting
   for(var topic in topicScores){
@@ -202,11 +229,9 @@ populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
   curUserData["topicLRTypeScores"] = topicLRTypeScores;
   curUserData["kcScores"] = kcScores;
 
-  //TODO generate from data
-  curUserData["lastTopic"] = getLastTopic(curStudentEmail,mappingsAndDifficulties);//"filter";
-  //TODO generate from data
-  curUserData["belowProcessingTimeThreshold"] = getProcessingTimeThreshold(curStudentEmail);
-  $("#jsonOutput").append(JSON.stringify(curUserData) + "<br />");
+  curUserData["lastTopic"] = getLastTopic(curStudentEmail,mappingsAndDifficulties);
+  curUserData["belowProcessingTimeThreshold"] = checkBelowProcessingTimeThreshold(curStudentEmail,mappingsAndDifficulties);
+  log("curUserData populated: " + JSON.stringify(curUserData));
   return curUserData;
 }
 
@@ -285,11 +310,9 @@ recommendationRules = {
               recommendations.push(itemsToChooseFrom[i]);
             }
         }
-
-        return recommendations;
-      }else{
-        return null;
       }
+
+      return recommendations;
     },
     pushingTheEnvelope : function(curUserData,mappingsAndDifficulties){
       log("pushingTheEnvelope");

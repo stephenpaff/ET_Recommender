@@ -124,19 +124,6 @@ for topic in dictAll:
                 itemsToLR[item] = set()
             itemsToLR[item].add(learningResource)
 
-# itemsToLRType = {}
-# for item in itemsToLR:
-#     lr = list(itemsToLR[item])[0]
-#     itemsToLRType[item] = list(lrToLRType[lr])[0]
-#
-# LRTypeToItems = {}
-# for item in itemsToLR:
-#     lr = list(itemsToLR[item])[0]
-#     lrType = list(lrToLRType[lr])[0]
-#     if lrType not in LRTypeToItems:
-#         LRTypeToItems[lrType] = set()
-#     LRTypeToItems[lrType].add(item)
-
 topicDifficulties = {
     "Ohm's Law & Kirchhoff’s Law".lower():1,
     'Series & Parallel Circuit'.lower():2,
@@ -199,6 +186,10 @@ for lr in lrToLRType:
     lrDifficulties[lr] = lrDifficulty
 
 itemDifficulties = {}
+itemProcessingThresholds = {}
+
+#15 minutes * 60 seconds/min * 1000 milliseconds/sec
+processingTimeConstant = 15 * 60 * 1000
 
 items = itemsToKCs.keys()
 
@@ -223,6 +214,7 @@ for item in items:
     difficulty = difficulty / (2 + numKCs)
 
     itemDifficulties[item] = difficulty
+    itemProcessingThresholds[item] = difficulty * processingTimeConstant
 
 #JSON encoding class to handle set objects as lists
 class SetEncoder(json.JSONEncoder):
@@ -239,7 +231,8 @@ mappings = {
              "itemsToTopics" : itemsToTopics,
              "KCsToTopics" : KCsToTopics,
              "KCsToTopicLRType" : KCsToTopicLRType,
-             "topicLRTypeToKCs" : topicLRTypeToKCs }
+             "topicLRTypeToKCs" : topicLRTypeToKCs,
+             "itemProcessingThresholds" : itemProcessingThresholds }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
                  "kcDifficulties" : kcDifficulties,
@@ -275,7 +268,6 @@ allDataJSON = json.dumps(allData,cls=SetEncoder)
 
 #lrsURl =
 #basicAuth =
-
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 
