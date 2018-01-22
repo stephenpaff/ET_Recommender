@@ -6,20 +6,27 @@ import json
 df = pd.read_csv('ET_KC_MAPPING - Learning_Resource_KC_Mapping.csv')
 #df = pd.read_csv('ET Assignment Bundles with Links - KC mapping.csv')
 
+#Remove empty columns
+df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
 #Rename KC columns to use second row in spreadsheet
-df.columns = df.columns[0:10].values.tolist() + df.iloc[[0]].values.tolist()[0][10:132]
+df.columns = df.columns[0:11].values.tolist() + df.iloc[[0]].values.tolist()[0][11:129] + df.columns[129:133].values.tolist()
 df = df.drop(0)
 
 #Get rid of unuseful columns
-df = df.drop(columns=['GUID','Lesson_Name','DocsLink','HTML5 Link','Checked Alignment?','Math'])
-df = df.iloc[:,:-3]
+df = df.drop(columns=['GUID','Lesson_Name','DocsLink','HTML5 Link','KC Bashir','Checked Alignment?','Math','Sum','BM comments','Converted'])
+
+#Reorder to move moodle links to front
+cols = list(df)
+cols.insert(4, cols.pop(cols.index("Moodle html")))
+df = df.ix[:, cols]
 
 #Get rid of duplicate/unuseful rows
 df = df[pd.notnull(df['Topic'])]
 
 dictAll = {}
 lrToLRType = {}
-
+itemsToLinks = {}
 columns = df.columns.values.tolist()
 
 for i in range(0,df.shape[0]):
@@ -28,6 +35,9 @@ for i in range(0,df.shape[0]):
     topic = row[1].lower()
     learningResource = row[2].lower()
     lrType = row[3].lower()
+    link = row[4]
+    if(pd.notnull(link)):
+        itemsToLinks[item] = link
     if learningResource not in lrToLRType:
         lrToLRType[learningResource] = set()
     lrToLRType[learningResource].add(lrType)
@@ -37,7 +47,7 @@ for i in range(0,df.shape[0]):
         dictAll[topic][learningResource] = {}
     if item not in dictAll[topic][learningResource]:
         dictAll[topic][learningResource][item] = []
-    for j in range(3,df.shape[1]):
+    for j in range(4,df.shape[1]):
         if(row[j] == '1'):
             dictAll[topic][learningResource][item].append(columns[j].lower())
 
@@ -232,7 +242,8 @@ mappings = {
              "KCsToTopics" : KCsToTopics,
              "KCsToTopicLRType" : KCsToTopicLRType,
              "topicLRTypeToKCs" : topicLRTypeToKCs,
-             "itemProcessingThresholds" : itemProcessingThresholds }
+             "itemProcessingThresholds" : itemProcessingThresholds,
+             "itemsToLinks" : itemsToLinks }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
                  "kcDifficulties" : kcDifficulties,

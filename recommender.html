@@ -8,6 +8,7 @@
 <script type="text/javascript" src="./lib/xapiwrapper.js"></script>
 <script src="./hostedResources/lib/myxapiclient.js"></script>
 <body>
+  <div id="buttonArea"></div>
   <p id="log">Log: <br /></p>
   <pre id="jsonOutput"></pre>
 </body>
@@ -16,45 +17,105 @@ var debug = true;
 log = function(msg){
   if(debug){
     console.log(msg);
-    $("#log").append(msg + "<br />");
+    //$("#log").append(msg + "<br />");
   }
 }
 
-setTimeout(function(){
-  var curStudentEmail = "mailto:xahu@memphis.edu";//"mailto:andrew.tackett@gmail.com";
-  log("recommendation: " + JSON.stringify(getRecommendation(curStudentEmail)));
-},1000);
+function toTitleCase(str) {
+    return str.replace(/(?:^|\s)\w/g, function(match) {
+        return match.toUpperCase();
+    });
+}
 
-getRecommendation = function(curStudentEmail){
+genButtonsFromRecommendations = function(recommendations,mappingsAndDifficulties){
+  var itemsToLinks = mappingsAndDifficulties['mappings']['itemsToLinks'];
+  for(var index in recommendations){
+    var recommendation = recommendations[index];
+    if(!recommendation){
+      console.log("not recommendation: " + recommendation);
+      continue;
+    }
+    var recommendationSplit = recommendation.split(',')
+    var topic = recommendationSplit[0];
+    var LR = recommendationSplit[1];
+    var itemID = recommendationSplit[2];
+    //TODO figure out how to navigate in plugin, goToURL is not defined in object
+    var button = "<button onclick='goToURL(" + itemsToLinks[itemID] + ")' style='font-size: 16px'>" + toTitleCase(topic) + " - " + toTitleCase(LR) + "</button><br />";
+    console.log(button);
+    $("#buttonArea").append(button);
+  }
+
+}
+
+getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
   log("getRecommendation start");
 
-  var recommendation = "";
-
-  var mappingsAndDifficulties = getMappingsAndDifficulties();
+  var finalRecommendations = [];
 
   var curUserData = populateUpdateCurUserData(curStudentEmail,mappingsAndDifficulties);
-
 
   if(!!curUserData){
     recommendations = {};
     for(var func in recommendationRules){
       recommendations[func] = recommendationRules[func](curUserData,mappingsAndDifficulties);
     }
-    log(JSON.stringify(recommendations));
-    return null;
+    window.recommendations = recommendations;
+    log("recommendations: " + JSON.stringify(recommendations));
+
+    var numRecommendations = 0;
+    for(rule in recommendations){
+      numRecommendations += recommendations[rule].length;
+      var curRecommendationArr = recommendations[rule];
+
+      for(var index in curRecommendationArr){
+        var curRecommendation = curRecommendationArr[index];
+          if(curRecommendation.indexOf("undefined")==-1){
+            var curRecommendationSplit = curRecommendation.split(',');
+            var hasEmpty = false;
+            for(var index in curRecommendationSplit){
+              if(curRecommendationSplit[index].trim() == ""){
+                hasEmpty = true;
+              }
+            }
+            if(!hasEmpty){
+              finalRecommendations.push(curRecommendation);
+            }else{
+              log("has empty in recommendation: " + curRecommendation + ", from rule: " + rule);
+            }
+          }else{
+            log("undefined in recommendation: " + curRecommendation + ", from rule: " + rule);
+          }
+      }
+      //finalRecommendations = finalRecommendations.concat(curRecommendationArr)
+    }
+
+
+    switch(numRecommendations){
+      case 0:
+        //Recommend next topic TODO
+      case 1:
+      case 2:
+      case 3:
+        //recommend the ones in there now
+        break;
+      default:
+        //more than 3 recommendations, apply conflict resolution TODO
+        break;
+    }
   }else{
     log("couldn't get data from LRS");
   }
 
   log("after main body");
 
+  return finalRecommendations;
   //TODO: Default recommendation code
 }
 
 topicMasteryThreshold = 0.7;
 lowTopicMasteryThreshold = 0.3
 
-var getMappingsAndDifficulties = function(){
+getMappingsAndDifficulties = function(){
   log("getMappingsAndDifficulties");
   try{
     var search = ADL.XAPIWrapper.searchParams();
@@ -64,7 +125,7 @@ var getMappingsAndDifficulties = function(){
     var ret = ADL.XAPIWrapper.getStatements(search);
     if(ret){
       var mappingsAndDifficulties = ret['statements'][0]['context']["extensions"]["https://umiis.github.io/ITSProfile/System/Data"];
-      log(JSON.stringify(mappingsAndDifficulties));
+      log("mappingsAndDifficulties: " + JSON.stringify(mappingsAndDifficulties));
       return mappingsAndDifficulties;
     }
   }catch(e){
@@ -350,6 +411,7 @@ recommendationRules = {
       return recommendations;
     },
     motivatedBottomDweller : function(curUserData,mappingsAndDifficulties){
+      log("motivatedBottomDweller");
       var recommendations = [];
 
       //Recommend one of the following Learning Resources if the student’s time
@@ -377,6 +439,7 @@ recommendationRules = {
       return recommendations;
     },
     unmotivatedBottomDweller : function(curUserData,mappingsAndDifficulties){
+      log("unmotivatedBottomDweller");
       var recommendations = [];
 
       //Recommend one of the following Learning Resources if the student’s time
@@ -385,6 +448,7 @@ recommendationRules = {
       if(curUserData.topicScores[curUserData.lastTopic] < lowTopicMasteryThreshold){
         if(curUserData.belowProcessingTimeThreshold){
           var topicLRType = curUserData.lastTopic + ",";
+          log("topicLRType: " + topicLRType);
           switch(getRandomNumber(3)){
             case 0:
               topicLRType += TS;
@@ -407,6 +471,17 @@ recommendationRules = {
 getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDifficulties, recommendationsArr){
   log("getItemFromTopicLRTypeWithZPDAlgorithm");
   var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType];
+  log("topicLRType: " + topicLRType + ", items: " + JSON.stringify(items));
+  var itemsToTopicLRType = {};
+  for(var index in items){
+    var item = items[index];
+    itemsToTopicLRType[item] = topicLRType;
+  }
+  log("itemsToTopicLRType: " + JSON.stringify(itemsToTopicLRType));
+  getItemViaZPDAlgorithm(itemsToTopicLRType,items,mappingsAndDifficulties,recommendationsArr);
+}
+
+getItemViaZPDAlgorithm = function(itemsToTopicLRType,items, mappingsAndDifficulties, recommendationsArr){
   var itemDifficulties = mappingsAndDifficulties["difficulties"]["itemDifficulties"];
   var kcDifficulties = mappingsAndDifficulties["difficulties"]["kcDifficulties"];
   var itemsToKCs = mappingsAndDifficulties["mappings"]["itemsToKCs"];
@@ -431,7 +506,7 @@ getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDiffic
       minDeviationItem = item;
     }
   }
-  var recommendation = topicLRType + "," + minDeviationItem;
+  var recommendation = itemsToTopicLRType[minDeviationItem] + "," + minDeviationItem;
   recommendationsArr.push(recommendation);
 }
 
@@ -452,5 +527,14 @@ getRandomNumber = function(max){
   return Math.floor(Math.random() * max);
 }
 
+setTimeout(function(){
+
+  var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:xhu@memphis.edu";//"mailto:<?php echo $USER->email ?>";
+  console.log("curStudentEmail: " + curStudentEmail);
+  var mappingsAndDifficulties = getMappingsAndDifficulties();
+  var recommendations = getRecommendations(curStudentEmail,mappingsAndDifficulties);
+  genButtonsFromRecommendations(recommendations,mappingsAndDifficulties);
+  log("recommendation: " + JSON.stringify(recommendations));
+},1000);
 </script>
 </html>
