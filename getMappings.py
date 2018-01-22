@@ -3,6 +3,22 @@ import requests
 from requests.auth import HTTPBasicAuth
 import json
 
+topicData = pd.read_csv('ET & PAL3 topic mapping - ET & PAL3 topic mapping.csv')
+topicData = topicData.loc[:,['Topic Name','Topic Summary Moodle Link','NEETs Link']]
+
+topicsToSummaryLinks = {}
+topicsToNEETsLinks = {}
+
+for i in range(0,topicData.shape[0]):
+    row = topicData.iloc[[i]].values.tolist()[0]
+    topicName = row[0]
+    summaryLink = row[1]
+    neetsLink = row[2]
+    if(pd.notnull(summaryLink)):
+        topicsToSummaryLinks[topicName] = summaryLink
+    if(pd.notnull(neetsLink)):
+        topicsToNEETsLinks[topicName] = neetsLink
+
 df = pd.read_csv('ET_KC_MAPPING - Learning_Resource_KC_Mapping.csv')
 #df = pd.read_csv('ET Assignment Bundles with Links - KC mapping.csv')
 
@@ -243,7 +259,9 @@ mappings = {
              "KCsToTopicLRType" : KCsToTopicLRType,
              "topicLRTypeToKCs" : topicLRTypeToKCs,
              "itemProcessingThresholds" : itemProcessingThresholds,
-             "itemsToLinks" : itemsToLinks }
+             "itemsToLinks" : itemsToLinks,
+             "topicsToSummaryLinks" : topicsToSummaryLinks,
+             "topicsToNEETsLinks" : topicsToNEETsLinks }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
                  "kcDifficulties" : kcDifficulties,
@@ -276,9 +294,6 @@ allData = { "actor" :{
 }
 
 allDataJSON = json.dumps(allData,cls=SetEncoder)
-
-#lrsURl =
-#basicAuth =
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 
