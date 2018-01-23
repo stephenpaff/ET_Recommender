@@ -6,7 +6,7 @@
 <script type="text/javascript" src="./lib/xapi-util.js"></script>
 <script type="text/javascript" src="./lib/xapistatement.js"></script>
 <script type="text/javascript" src="./lib/xapiwrapper.js"></script>
-<script src="./hostedResources/lib/myxapiclient.js"></script>
+<script src="./lib/myxapiclient.js"></script>
 <body>
   <div id="buttonArea"></div>
   <p id="log">Log: <br /></p>
@@ -29,19 +29,26 @@ function toTitleCase(str) {
 
 genButtonsFromRecommendations = function(recommendations,mappingsAndDifficulties){
   var itemsToLinks = mappingsAndDifficulties['mappings']['itemsToLinks'];
+  var topicsToSummaryLinks = mappingsAndDifficulties['mappings']['topicsToSummaryLinks'];
   for(var index in recommendations){
     var recommendation = recommendations[index];
     if(!recommendation){
-      console.log("not recommendation: " + recommendation);
+      log("not recommendation: " + recommendation);
       continue;
     }
     var recommendationSplit = recommendation.split(',')
     var topic = recommendationSplit[0];
     var LR = recommendationSplit[1];
     var itemID = recommendationSplit[2];
-    //TODO figure out how to navigate in plugin, goToURL is not defined in object
-    var button = "<button onclick='goToURL(" + itemsToLinks[itemID] + ")' style='font-size: 16px'>" + toTitleCase(topic) + " - " + toTitleCase(LR) + "</button><br />";
-    console.log(button);
+    var link = itemsToLinks[itemID];
+    if(TS.toLowerCase() === LR.toLowerCase()){
+      link = topicsToSummaryLinks[topic];
+      log("topic summary detected, link: " + link);
+    }
+
+    //TODO make buttons all same size (table?, centered text)
+    var button = "<button onclick='window.top.location.href=\"" + link + "\"' style='font-size: 13px'>" + toTitleCase(topic) + " - " + toTitleCase(LR) + "</button><br />";
+    log(button);
     $("#buttonArea").append(button);
   }
 
@@ -71,9 +78,10 @@ getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
         var curRecommendation = curRecommendationArr[index];
           if(curRecommendation.indexOf("undefined")==-1){
             var curRecommendationSplit = curRecommendation.split(',');
+            var LR = curRecommendationSplit[1];
             var hasEmpty = false;
             for(var index in curRecommendationSplit){
-              if(curRecommendationSplit[index].trim() == ""){
+              if(curRecommendationSplit[index].trim() == "" && LR != TS){
                 hasEmpty = true;
               }
             }
@@ -86,20 +94,34 @@ getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
             log("undefined in recommendation: " + curRecommendation + ", from rule: " + rule);
           }
       }
-      //finalRecommendations = finalRecommendations.concat(curRecommendationArr)
     }
-
 
     switch(numRecommendations){
       case 0:
-        //Recommend next topic TODO
+        //Recommend next topic
+        var lastTopic = curUserData['lastTopic'];
+        var nextTopic = findNextTopic(lastTopic,mappingsAndDifficulties);
+        var recommendation = nextTopic + "," + TS + ",";
+        finalRecommendations.push(recommendation);
       case 1:
       case 2:
       case 3:
-        //recommend the ones in there now
+        //recommend the ones in there now i.e. do nothing
         break;
       default:
         //more than 3 recommendations, apply conflict resolution TODO
+        var overallPerformanceScore = getOverallPerformanceScore(curUserData,mappingsAndDifficulties);
+        log("overallPerformanceScore: " + overallPerformanceScore);
+        if(overallPerformanceScore < lowTopicMasteryThreshold){
+          //zpd algorithm TODO
+        }else if(lowTopicMasteryThreshold <= overallPerformanceScore <= topicMasteryThreshold){
+          //random selection
+          while(finalRecommendations.length > 3){
+            finalRecommendations.splice(getRandomNumber(finalRecommendations.length),1);
+          }
+        }else if(topicMasteryThreshold < overallPerformanceScore){
+          //pushing the envelope TODO
+        }
         break;
     }
   }else{
@@ -109,7 +131,29 @@ getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
   log("after main body");
 
   return finalRecommendations;
-  //TODO: Default recommendation code
+}
+
+getOverallPerformanceScore = function(lastTopic,lastLRType,curUserData,mappingsAndDifficulties){
+  log("get overallPerformanceScore");
+  var lastTopic = curUserData['lastTopic'];
+  var lastLRType = curUserData['lastLRType'];
+  var topicLRTypeToKCs = mappingsAndDifficulties['mappings']['topicLRTypeToKCs'];
+  var topicLRType = lastTopic + "," + lastLRType;
+  var kcs = topicLRTypeToKCs[topicLRType];
+  var avgKCScore = 0;
+  var numKCs = 0;
+  for(kc in kcs){
+    if(!!curUserData.kcScores[kc]){
+      avgKCScore += curUserData.kcScores[kc];
+      numKCs += 1;
+    }
+  }
+  //Handle case where user hasn't encountered any of the kcs for the item in question
+  if(numKCs != 0){
+    avgKCScore = avgKCScore / numKCs;
+  }
+
+  return avgKCScore;
 }
 
 topicMasteryThreshold = 0.7;
@@ -133,24 +177,41 @@ getMappingsAndDifficulties = function(){
   }
 }
 
+var findNextTopic = function(lastTopic,mappingsAndDifficulties){
+  var topicOrder = mappingsAndDifficulties['mappings']['topicOrder'];
+  var lastTopicIndex = 0;
+  for(var topic in topicOrder){
+    if(topic===lastTopic){
+      lastTopicIndex = topicOrder[topic];
+    }
+  }
+  var nextTopicIndex = (parseInt(lastTopicIndex) + 1).toString();
+  var nextTopic = topicOrder[nextTopicIndex];
+  return nextTopic;
+}
+
 var getLastTopic = function(curStudentEmail,mappingsAndDifficulties){
   try{
+    log("getting last topic");
     var itemsToTopics = mappingsAndDifficulties["mappings"]["itemsToTopics"];
+    var itemsToLRType = mappingsAndDifficulties["mappings"]["itemsToLRType"];
     setRegAPIConfig();
     var search = ADL.XAPIWrapper.searchParams();
     search['verb'] = "https://umiis.github.io/ITSProfile/verbs/SaveKCScore";
     search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
     search['limit'] = 1;
     var ret = ADL.XAPIWrapper.getStatements(search);
-    var lastItem = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":")[1].toLowerCase();
+    var SKOTitleSplit = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":");
+    var lastItem = SKOTitleSplit[1].toLowerCase();
+    var lastLRType = itemsToLRType[lastItem];
     var lastTopic = itemsToTopics[lastItem];
-    log("last item: " + lastItem + ", last topic: " + lastTopic);
+    log("last item: " + lastItem + ", last LR: " + lastLRType + ", last topic: " + lastTopic);
 
-    return lastTopic;
+    return [lastLRType,lastTopic];
   }catch(e){
     log("Error getting last topic: " + e);
     //Default last topic in case we can't find one or error out
-    return "Ohm's Law & Kirchhoff’s Law"
+    return [TS,"Ohm's Law & Kirchhoff’s Law"]
   }
 }
 
@@ -289,8 +350,9 @@ populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
   curUserData["topicScores"] = topicScores;
   curUserData["topicLRTypeScores"] = topicLRTypeScores;
   curUserData["kcScores"] = kcScores;
-
-  curUserData["lastTopic"] = getLastTopic(curStudentEmail,mappingsAndDifficulties);
+  var lastLRTypeAndTopic = getLastTopic(curStudentEmail,mappingsAndDifficulties);
+  curUserData["lastLRType"] = lastLRTypeAndTopic[0];
+  curUserData["lastTopic"] = lastLRTypeAndTopic[1];
   curUserData["belowProcessingTimeThreshold"] = checkBelowProcessingTimeThreshold(curStudentEmail,mappingsAndDifficulties);
   log("curUserData populated: " + JSON.stringify(curUserData));
   return curUserData;
@@ -448,7 +510,6 @@ recommendationRules = {
       if(curUserData.topicScores[curUserData.lastTopic] < lowTopicMasteryThreshold){
         if(curUserData.belowProcessingTimeThreshold){
           var topicLRType = curUserData.lastTopic + ",";
-          log("topicLRType: " + topicLRType);
           switch(getRandomNumber(3)){
             case 0:
               topicLRType += TS;
@@ -460,6 +521,7 @@ recommendationRules = {
               topicLRType += EL;
               break;
           }
+          log("topicLRType: " + topicLRType);
           getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
         }
       }
@@ -469,16 +531,21 @@ recommendationRules = {
 }
 
 getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDifficulties, recommendationsArr){
-  log("getItemFromTopicLRTypeWithZPDAlgorithm");
-  var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType];
-  log("topicLRType: " + topicLRType + ", items: " + JSON.stringify(items));
-  var itemsToTopicLRType = {};
-  for(var index in items){
-    var item = items[index];
-    itemsToTopicLRType[item] = topicLRType;
+  //Handle no items for topic summary
+  if(topicLRType.indexOf(TS.toLowerCase()) != -1){
+    recommendationsArr.push(topicLRType + ",");
+  }else{
+    log("getItemFromTopicLRTypeWithZPDAlgorithm");
+    var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType];
+    log("topicLRType: " + topicLRType + ", items: " + JSON.stringify(items));
+    var itemsToTopicLRType = {};
+    for(var index in items){
+      var item = items[index];
+      itemsToTopicLRType[item] = topicLRType;
+    }
+    log("itemsToTopicLRType: " + JSON.stringify(itemsToTopicLRType));
+    getItemViaZPDAlgorithm(itemsToTopicLRType,items,mappingsAndDifficulties,recommendationsArr);
   }
-  log("itemsToTopicLRType: " + JSON.stringify(itemsToTopicLRType));
-  getItemViaZPDAlgorithm(itemsToTopicLRType,items,mappingsAndDifficulties,recommendationsArr);
 }
 
 getItemViaZPDAlgorithm = function(itemsToTopicLRType,items, mappingsAndDifficulties, recommendationsArr){
@@ -487,26 +554,37 @@ getItemViaZPDAlgorithm = function(itemsToTopicLRType,items, mappingsAndDifficult
   var itemsToKCs = mappingsAndDifficulties["mappings"]["itemsToKCs"];
   var minDeviation = Number.MAX_VALUE;
   var minDeviationItem = "";
-  for(item in items){
+  for(var index in items){
+    var item = items[index];
+    log("item: " + item);
     var kcsForItem = itemsToKCs[item];
+    log("kcsForItem: " + JSON.stringify(kcsForItem));
     var avgKCScore = 0;
     var numKCs = 0;
     for(kc in kcsForItem){
-      if(curUserData.kcScores.indexOf(kc)!= -1){
+      if(!!curUserData.kcScores[kc]){
         avgKCScore += curUserData.kcScores[kc];
         numKCs += 1;
       }
     }
-    avgKCScore = avgKCScore / numKCs;
+    //Handle case where user hasn't encountered any of the kcs for the item in question
+    if(numKCs != 0){
+      avgKCScore = avgKCScore / numKCs;
+    }
     var projectedPerformanceScore = avgKCScore;
     var itemDifficulty = itemDifficulties[item];
     var value = Math.pow(projectedPerformanceScore - itemDifficulty,2);
+    log("projectedPerformanceScore: " + projectedPerformanceScore);
+    log("itemDifficulty: " + itemDifficulty);
+    log("value: " + value);
     if(value < minDeviation){
       minDeviation = value;
       minDeviationItem = item;
+      log("new minDeviations: " + minDeviation + "," + minDeviationItem);
     }
   }
   var recommendation = itemsToTopicLRType[minDeviationItem] + "," + minDeviationItem;
+  log("recommendation: " + recommendation);
   recommendationsArr.push(recommendation);
 }
 
@@ -530,7 +608,7 @@ getRandomNumber = function(max){
 setTimeout(function(){
 
   var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:xhu@memphis.edu";//"mailto:<?php echo $USER->email ?>";
-  console.log("curStudentEmail: " + curStudentEmail);
+  log("curStudentEmail: " + curStudentEmail);
   var mappingsAndDifficulties = getMappingsAndDifficulties();
   var recommendations = getRecommendations(curStudentEmail,mappingsAndDifficulties);
   genButtonsFromRecommendations(recommendations,mappingsAndDifficulties);

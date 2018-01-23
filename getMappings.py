@@ -6,12 +6,15 @@ import json
 topicData = pd.read_csv('ET & PAL3 topic mapping - ET & PAL3 topic mapping.csv')
 topicData = topicData.loc[:,['Topic Name','Topic Summary Moodle Link','NEETs Link']]
 
+#Get rid of rows with empty values so we don't hit parse errors
+topicData = topicData.dropna()
+
 topicsToSummaryLinks = {}
 topicsToNEETsLinks = {}
 
 for i in range(0,topicData.shape[0]):
     row = topicData.iloc[[i]].values.tolist()[0]
-    topicName = row[0]
+    topicName = row[0].lower()
     summaryLink = row[1]
     neetsLink = row[2]
     if(pd.notnull(summaryLink)):
@@ -150,8 +153,13 @@ for topic in dictAll:
                 itemsToLR[item] = set()
             itemsToLR[item].add(learningResource)
 
+itemsToLRType = {}
+for item in itemsToLR:
+    lr = list(itemsToLR[item])[0]
+    itemsToLRType[item] = lrToLRType[lr]
+
 topicDifficulties = {
-    "Ohm's Law & Kirchhoff’s Law".lower():1,
+    "Ohm's Law & Kirchhoff's Law".lower():1,
     'Series & Parallel Circuit'.lower():2,
     'Series/Parallel Combination'.lower():3,
     'Filter'.lower():3,
@@ -166,6 +174,24 @@ topicDifficulties = {
     'CB Amplifier'.lower():5,
     'Multistage Amplifier'.lower():6,
     'PushPull Amplifier'.lower():6
+}
+
+topicOrder = {
+    0:"Ohm's Law & Kirchhoff's Law".lower(),
+    1:'Series & Parallel Circuit'.lower(),
+    2:'Series/Parallel Combination'.lower(),
+    3:'Filter'.lower(),
+    4:'PN Junction'.lower(),
+    5:'Rectifier'.lower(),
+    6:'Power Supply'.lower(),
+    7:'Diode Limiter & Clamper'.lower(),
+    8:'Zener Diode & Regulator'.lower(),
+    9:'Transistor'.lower(),
+    10:'CE Amplifier'.lower(),
+    11:'CC Amplifier'.lower(),
+    12:'CB Amplifier'.lower(),
+    13:'Multistage Amplifier'.lower(),
+    14:'PushPull Amplifier'.lower()
 }
 
 #Rescale to 0 to 1
@@ -254,6 +280,7 @@ mappings = {
              "topicLRTypeKCToItems" : topicLRTypeKCToItems,
              "topicsToKCs" : topicsToKCs,
              "itemsToKCs" : itemsToKCs,
+             "itemsToLRType" : itemsToLRType,
              "itemsToTopics" : itemsToTopics,
              "KCsToTopics" : KCsToTopics,
              "KCsToTopicLRType" : KCsToTopicLRType,
@@ -261,7 +288,8 @@ mappings = {
              "itemProcessingThresholds" : itemProcessingThresholds,
              "itemsToLinks" : itemsToLinks,
              "topicsToSummaryLinks" : topicsToSummaryLinks,
-             "topicsToNEETsLinks" : topicsToNEETsLinks }
+             "topicsToNEETsLinks" : topicsToNEETsLinks,
+             "topicOrder" : topicOrder }
 
 difficulties = { "topicDifficulties" : topicDifficulties,
                  "kcDifficulties" : kcDifficulties,
@@ -300,13 +328,3 @@ headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experienc
 r = requests.post(lrsURL,data=allDataJSON, headers=headers)
 
 print(r.text)
-
-#Testing
-##test = []
-##for topic in dictAll:
-##    for learningResource in dictAll[topic]:
-##        for item in dictAll[topic][learningResource]:
-##            cur = (topic+","+learningResource+","+item)
-##            if cur in test:
-##                print(cur)
-##            test.append(cur)
