@@ -9,8 +9,6 @@
 <script src="./lib/myxapiclient.js"></script>
 <body>
   <div id="buttonArea"></div>
-  <p id="log">Log: <br /></p>
-  <pre id="jsonOutput"></pre>
 </body>
 <script>
 var debug = true;
@@ -109,18 +107,34 @@ getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
         //recommend the ones in there now i.e. do nothing
         break;
       default:
-        //more than 3 recommendations, apply conflict resolution TODO
+        //more than 3 recommendations, apply conflict resolution
         var overallPerformanceScore = getOverallPerformanceScore(curUserData,mappingsAndDifficulties);
         log("overallPerformanceScore: " + overallPerformanceScore);
         if(overallPerformanceScore < lowTopicMasteryThreshold){
-          //zpd algorithm TODO
+          //zpd algorithm
+          var items = finalRecommendations;
+          finalRecommendations = [];
+          items = getItemsViaZPDAlgorithm(3,items,curUserData,mappingsAndDifficulties);
+          for(var index in items){
+            finalRecommendations.push(items[index]);
+          }
+          //getItemViaZPDAlgorithm
         }else if(lowTopicMasteryThreshold <= overallPerformanceScore <= topicMasteryThreshold){
           //random selection
           while(finalRecommendations.length > 3){
             finalRecommendations.splice(getRandomNumber(finalRecommendations.length),1);
           }
         }else if(topicMasteryThreshold < overallPerformanceScore){
-          //pushing the envelope TODO
+          //pushing the envelope
+          var tempRecommendations = finalRecommendations;
+          finalRecommendations = [];
+          if(recommendations["pushingTheEnvelope"].length > 0){
+            finalRecommendations = finalRecommendations.concat(recommendations["pushingTheEnvelope"]);
+          }
+          while(finalRecommendations.length < 3){
+            var randomTempRecommendationIndex = getRandomNumber(tempRecommendations.length);
+            finalRecommendations.push(tempRecommendations.slice(randomTempRecommendationIndex,randomTempRecommendationIndex + 1));
+          }
         }
         break;
     }
@@ -140,6 +154,7 @@ getOverallPerformanceScore = function(lastTopic,lastLRType,curUserData,mappingsA
   var topicLRTypeToKCs = mappingsAndDifficulties['mappings']['topicLRTypeToKCs'];
   var topicLRType = lastTopic + "," + lastLRType;
   var kcs = topicLRTypeToKCs[topicLRType];
+  log("num possible kcs: " + kcs.length);
   var avgKCScore = 0;
   var numKCs = 0;
   for(kc in kcs){
@@ -152,6 +167,7 @@ getOverallPerformanceScore = function(lastTopic,lastLRType,curUserData,mappingsA
   if(numKCs != 0){
     avgKCScore = avgKCScore / numKCs;
   }
+  log("numKCs, attempted: " + numKCs);
 
   return avgKCScore;
 }
@@ -193,7 +209,7 @@ var findNextTopic = function(lastTopic,mappingsAndDifficulties){
 var getLastTopic = function(curStudentEmail,mappingsAndDifficulties){
   try{
     log("getting last topic");
-    var itemsToTopics = mappingsAndDifficulties["mappings"]["itemsToTopics"];
+    var itemsToTopic = mappingsAndDifficulties["mappings"]["itemsToTopic"];
     var itemsToLRType = mappingsAndDifficulties["mappings"]["itemsToLRType"];
     setRegAPIConfig();
     var search = ADL.XAPIWrapper.searchParams();
@@ -204,14 +220,14 @@ var getLastTopic = function(curStudentEmail,mappingsAndDifficulties){
     var SKOTitleSplit = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":");
     var lastItem = SKOTitleSplit[1].toLowerCase();
     var lastLRType = itemsToLRType[lastItem];
-    var lastTopic = itemsToTopics[lastItem];
+    var lastTopic = itemsToTopic[lastItem];
     log("last item: " + lastItem + ", last LR: " + lastLRType + ", last topic: " + lastTopic);
 
     return [lastLRType,lastTopic];
   }catch(e){
     log("Error getting last topic: " + e);
     //Default last topic in case we can't find one or error out
-    return [TS,"Ohm's Law & Kirchhoff’s Law"]
+    return [TS,"Series/Parallel Combination"]
   }
 }
 
@@ -494,7 +510,7 @@ recommendationRules = {
               topicLRType += EL;
               break;
           }
-          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,curUserData,mappingsAndDifficulties,recommendations);
         }
       }
 
@@ -522,7 +538,7 @@ recommendationRules = {
               break;
           }
           log("topicLRType: " + topicLRType);
-          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,mappingsAndDifficulties,recommendations);
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,curUserData,mappingsAndDifficulties,recommendations);
         }
       }
 
@@ -530,7 +546,7 @@ recommendationRules = {
     }
 }
 
-getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDifficulties, recommendationsArr){
+getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, curUserData,mappingsAndDifficulties, recommendationsArr){
   //Handle no items for topic summary
   if(topicLRType.indexOf(TS.toLowerCase()) != -1){
     recommendationsArr.push(topicLRType + ",");
@@ -538,22 +554,48 @@ getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, mappingsAndDiffic
     log("getItemFromTopicLRTypeWithZPDAlgorithm");
     var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType];
     log("topicLRType: " + topicLRType + ", items: " + JSON.stringify(items));
-    var itemsToTopicLRType = {};
+    var items = getItemsViaZPDAlgorithm(1,items,curUserData,mappingsAndDifficulties);
     for(var index in items){
-      var item = items[index];
-      itemsToTopicLRType[item] = topicLRType;
+      recommendationsArr.push(items[index]);
     }
-    log("itemsToTopicLRType: " + JSON.stringify(itemsToTopicLRType));
-    getItemViaZPDAlgorithm(itemsToTopicLRType,items,mappingsAndDifficulties,recommendationsArr);
   }
 }
 
-getItemViaZPDAlgorithm = function(itemsToTopicLRType,items, mappingsAndDifficulties, recommendationsArr){
+//Returns "topic,LRType,item" - comma separated string
+getItemsViaZPDAlgorithm = function(numItemsToGet,items,curUserData,mappingsAndDifficulties){
+  log("getItemsViaZPDAlgorithm");
+  var itemScores = calcScoresForZPDAlgorithm(items,curUserData,mappingsAndDifficulties);
+  log("itemScores: " + JSON.stringify(itemScores));
+  var itemsToTopicLRType = mappingsAndDifficulties['mappings']['itemsToTopicLRType'];
+  var itemsSorted = Object.keys(itemScores).map(function(key) {
+      return [key, itemScores[key]];
+  });
+
+  itemsSorted.sort(function(first, second) {
+      return first[1] - second[1];
+  });
+
+  itemsSorted = itemsSorted.slice(0, numItemsToGet);
+
+  var items = [];
+  for(var index in itemsSorted){
+    var item = itemsSorted[index][0];
+    var topicLRType = itemsToTopicLRType[item];
+    items.push(topicLRType + "," + item);
+  }
+
+  log("items: " + JSON.stringify(items));
+  return items;
+}
+
+calcScoresForZPDAlgorithm = function(items, curUserData,mappingsAndDifficulties){
+  log("calcScoresForZPDAlgorithm");
   var itemDifficulties = mappingsAndDifficulties["difficulties"]["itemDifficulties"];
   var kcDifficulties = mappingsAndDifficulties["difficulties"]["kcDifficulties"];
   var itemsToKCs = mappingsAndDifficulties["mappings"]["itemsToKCs"];
-  var minDeviation = Number.MAX_VALUE;
-  var minDeviationItem = "";
+
+  var itemScores = {};
+
   for(var index in items){
     var item = items[index];
     log("item: " + item);
@@ -574,18 +616,13 @@ getItemViaZPDAlgorithm = function(itemsToTopicLRType,items, mappingsAndDifficult
     var projectedPerformanceScore = avgKCScore;
     var itemDifficulty = itemDifficulties[item];
     var value = Math.pow(projectedPerformanceScore - itemDifficulty,2);
+    itemScores[item] = value;
     log("projectedPerformanceScore: " + projectedPerformanceScore);
     log("itemDifficulty: " + itemDifficulty);
     log("value: " + value);
-    if(value < minDeviation){
-      minDeviation = value;
-      minDeviationItem = item;
-      log("new minDeviations: " + minDeviation + "," + minDeviationItem);
-    }
   }
-  var recommendation = itemsToTopicLRType[minDeviationItem] + "," + minDeviationItem;
-  log("recommendation: " + recommendation);
-  recommendationsArr.push(recommendation);
+
+  return itemScores;
 }
 
 getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,recommendationsArr){
@@ -607,7 +644,7 @@ getRandomNumber = function(max){
 
 setTimeout(function(){
 
-  var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:xhu@memphis.edu";//"mailto:<?php echo $USER->email ?>";
+  var curStudentEmail = "mailto:xhu@memphis.edu";//"mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
   log("curStudentEmail: " + curStudentEmail);
   var mappingsAndDifficulties = getMappingsAndDifficulties();
   var recommendations = getRecommendations(curStudentEmail,mappingsAndDifficulties);
