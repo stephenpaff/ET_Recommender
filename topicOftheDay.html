@@ -1,5 +1,60 @@
-<!DOCTYPE HTML>
 
-<html>
 
+<?php
+    require_once("../config.php");
+    require_login();
+?>
 <html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript" src="./lib/cryptojs_v3.1.2.js"></script>
+<script type="text/javascript" src="./lib/verbs.js"></script>
+<script type="text/javascript" src="./lib/xapi-launch.js"></script>
+<script type="text/javascript" src="./lib/xapi-util.js"></script>
+<script type="text/javascript" src="./lib/xapistatement.js"></script>
+<script type="text/javascript" src="./lib/xapiwrapper.js"></script>
+<script src="./lib/myxapiclient.js"></script>
+<style>
+body, html {width: 100%; height: 100%; margin: 0; padding: 0}
+.myIframe {
+     position: relative;
+     padding-bottom: 65.25%;
+     padding-top: 30px;
+     height: 0;
+     overflow: auto;
+     -webkit-overflow-scrolling:touch;
+     border: solid black 1px;
+}
+.myIframe iframe {
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 100%;
+     height: 100%;
+}
+</style>
+<div class="myIframe">
+<iframe id="displayedContent" src="" frameborder="0" style="overflow:hidden" sandbox="allow-top-navigation allow-scripts allow-forms"></iframe>
+</div>
+<button onclick="finishCurContent()">Finish</button>
+<script type="text/javascript">
+var queryString = window.location.search;
+$("#displayedContent").attr("src","http://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
+window.addEventListener('message',function(event){
+  console.log("received message: " + event.data);
+},false);
+var curStudentEmail = "mailto:<?php echo $USER->email ?>";
+console.log("test var is: " + curStudentEmail);
+finishCurContent = function(){
+  console.log("pressed finish");
+  setRegAPIConfig();
+  var search = ADL.searchParams();
+  search['verb'] = "http://adlnet.gov/expapi/verbs/completed";
+  search['actor'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
+  search['limit'] = 1;
+  var ret = wrapper.getStatements(search);
+  var SKOTitle = ret['statements'][0]['context']["extensions"]["http://autotutor&46;x-in-y&46;com/AT"]["SKOTitle"];
+  var lr = SKOTitle.split(':')[0]
+  //sendCompleted(lr,problemID);
+}
+</script>
+</html>

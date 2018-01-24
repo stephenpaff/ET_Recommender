@@ -33,12 +33,15 @@ df.columns = df.columns[0:11].values.tolist() + df.iloc[[0]].values.tolist()[0][
 df = df.drop(0)
 
 #Get rid of unuseful columns
-df = df.drop(columns=['GUID','Lesson_Name','DocsLink','HTML5 Link','KC Bashir','Checked Alignment?','Math','Sum','BM comments','Converted'])
+df = df.drop(columns=['GUID','Lesson_Name','DocsLink','KC Bashir','Checked Alignment?','Math','Sum','BM comments','Converted'])
 
 #Reorder to move moodle links to front
 cols = list(df)
 cols.insert(4, cols.pop(cols.index("Moodle html")))
+cols.insert(5, cols.pop(cols.index("HTML5 Link")))
 df = df.ix[:, cols]
+
+
 
 #Get rid of duplicate/unuseful rows
 df = df[pd.notnull(df['Topic'])]
@@ -46,6 +49,7 @@ df = df[pd.notnull(df['Topic'])]
 dictAll = {}
 lrToLRType = {}
 itemsToLinks = {}
+itemsToSourceLinks = {}
 columns = df.columns.values.tolist()
 
 for i in range(0,df.shape[0]):
@@ -55,8 +59,11 @@ for i in range(0,df.shape[0]):
     learningResource = row[2].lower()
     lrType = row[3].lower()
     link = row[4]
+    sourceLink = row[5]
     if(pd.notnull(link)):
         itemsToLinks[item] = link
+    if(pd.notnull(sourceLink)):
+        itemsToSourceLinks[item] = sourceLink
     if learningResource not in lrToLRType:
         lrToLRType[learningResource] = lrType
     if topic not in dictAll:
@@ -65,7 +72,7 @@ for i in range(0,df.shape[0]):
         dictAll[topic][learningResource] = {}
     if item not in dictAll[topic][learningResource]:
         dictAll[topic][learningResource][item] = []
-    for j in range(4,df.shape[1]):
+    for j in range(5,df.shape[1]):
         if(row[j] == '1'):
             dictAll[topic][learningResource][item].append(columns[j].lower())
 
@@ -289,6 +296,7 @@ mappings = {
              "topicLRTypeToKCs" : topicLRTypeToKCs,
              "itemProcessingThresholds" : itemProcessingThresholds,
              "itemsToLinks" : itemsToLinks,
+             "itemsToSourceLinks" : itemsToSourceLinks,
              "topicsToSummaryLinks" : topicsToSummaryLinks,
              "topicsToNEETsLinks" : topicsToNEETsLinks,
              "topicOrder" : topicOrder }
