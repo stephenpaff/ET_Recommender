@@ -175,24 +175,6 @@ getOverallPerformanceScore = function(lastTopic,lastLRType,curUserData,mappingsA
 topicMasteryThreshold = 0.7;
 lowTopicMasteryThreshold = 0.3
 
-getMappingsAndDifficulties = function(){
-  log("getMappingsAndDifficulties");
-  try{
-    var search = ADL.XAPIWrapper.searchParams();
-    search['verb'] = "https://umiis.github.io/ITSProfile/System/Store_Data";
-    search['agent'] = JSON.stringify({"mbox":"mailto:data@electronixtutor.com","objectType":"Agent"});
-    search['limit'] = 1;
-    var ret = ADL.XAPIWrapper.getStatements(search);
-    if(ret){
-      var mappingsAndDifficulties = ret['statements'][0]['context']["extensions"]["https://umiis.github.io/ITSProfile/System/Data"];
-      log("mappingsAndDifficulties: " + JSON.stringify(mappingsAndDifficulties));
-      return mappingsAndDifficulties;
-    }
-  }catch(e){
-    log("error getting mappings and difficulties: " + e);
-  }
-}
-
 var findNextTopic = function(lastTopic,mappingsAndDifficulties){
   var topicOrder = mappingsAndDifficulties['mappings']['topicOrder'];
   var lastTopicIndex = 0;
@@ -632,14 +614,6 @@ getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,reco
     var recommendation = topicLRType + "," + getRandomArrayValue(items);
     recommendationsArr.push(recommendation);
   }
-}
-
-getRandomArrayValue = function(arr){
-  return arr[getRandomNumber(arr.length)];
-}
-
-getRandomNumber = function(max){
-  return Math.floor(Math.random() * max);
 }
 
 setTimeout(function(){

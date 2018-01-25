@@ -4,12 +4,13 @@ from requests.auth import HTTPBasicAuth
 import json
 
 topicData = pd.read_csv('ET & PAL3 topic mapping - ET & PAL3 topic mapping.csv')
-topicData = topicData.loc[:,['Topic Name','Topic Summary Moodle Link','NEETs Link']]
+topicData = topicData.loc[:,['Topic Name','Topic Summary Moodle Link','NEETs Link','Topic Summary Link']]
 
 #Get rid of rows with empty values so we don't hit parse errors
 topicData = topicData.dropna()
 
 topicsToSummaryLinks = {}
+topicsToSourceLinks = {}
 topicsToNEETsLinks = {}
 
 for i in range(0,topicData.shape[0]):
@@ -17,10 +18,13 @@ for i in range(0,topicData.shape[0]):
     topicName = row[0].lower()
     summaryLink = row[1]
     neetsLink = row[2]
+    topicSourceLink = row[3]
     if(pd.notnull(summaryLink)):
         topicsToSummaryLinks[topicName] = summaryLink
     if(pd.notnull(neetsLink)):
         topicsToNEETsLinks[topicName] = neetsLink
+    if(pd.notnull(topicSourceLink)):
+        topicsToSourceLinks[topicName] = topicSourceLink
 
 df = pd.read_csv('ET_KC_MAPPING - Learning_Resource_KC_Mapping.csv')
 #df = pd.read_csv('ET Assignment Bundles with Links - KC mapping.csv')
@@ -29,16 +33,17 @@ df = pd.read_csv('ET_KC_MAPPING - Learning_Resource_KC_Mapping.csv')
 df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
 #Rename KC columns to use second row in spreadsheet
-df.columns = df.columns[0:11].values.tolist() + df.iloc[[0]].values.tolist()[0][11:129] + df.columns[129:133].values.tolist()
+df.columns = df.columns[0:12].values.tolist() + df.iloc[[0]].values.tolist()[0][12:130] + df.columns[130:134].values.tolist()
 df = df.drop(0)
 
 #Get rid of unuseful columns
-df = df.drop(columns=['GUID','Lesson_Name','DocsLink','KC Bashir','Checked Alignment?','Math','Sum','BM comments','Converted'])
+df = df.drop(columns=['GUID','Lesson_Name','DocsLink','HTML5 Link','KC Bashir','Checked Alignment?','Sum','BM comments','Converted'])
 
 #Reorder to move moodle links to front
 cols = list(df)
 cols.insert(4, cols.pop(cols.index("Moodle html")))
-cols.insert(5, cols.pop(cols.index("HTML5 Link")))
+cols.insert(5, cols.pop(cols.index("Direct Link")))
+cols.insert(6, cols.pop(cols.index("Math")))
 df = df.ix[:, cols]
 
 
@@ -51,6 +56,7 @@ lrToLRType = {}
 itemsToLinks = {}
 itemsToSourceLinks = {}
 columns = df.columns.values.tolist()
+itemHasMath = {}
 
 for i in range(0,df.shape[0]):
     row = df.iloc[[i]].values.tolist()[0]
@@ -60,10 +66,13 @@ for i in range(0,df.shape[0]):
     lrType = row[3].lower()
     link = row[4]
     sourceLink = row[5]
+    math = row[6]
     if(pd.notnull(link)):
         itemsToLinks[item] = link
     if(pd.notnull(sourceLink)):
         itemsToSourceLinks[item] = sourceLink
+    if(pd.notnull(math)):
+        itemHasMath[item] = math == "1"
     if learningResource not in lrToLRType:
         lrToLRType[learningResource] = lrType
     if topic not in dictAll:
@@ -72,7 +81,7 @@ for i in range(0,df.shape[0]):
         dictAll[topic][learningResource] = {}
     if item not in dictAll[topic][learningResource]:
         dictAll[topic][learningResource][item] = []
-    for j in range(5,df.shape[1]):
+    for j in range(6,df.shape[1]):
         if(row[j] == '1'):
             dictAll[topic][learningResource][item].append(columns[j].lower())
 
@@ -286,6 +295,7 @@ class SetEncoder(json.JSONEncoder):
 mappings = {
              "topicLRTypeToItems" : topicLRTypeToItems,
              "topicLRTypeKCToItems" : topicLRTypeKCToItems,
+             "topicLRTypeToKCs" : topicLRTypeToKCs,
              "topicsToKCs" : topicsToKCs,
              "itemsToKCs" : itemsToKCs,
              "itemsToLRType" : itemsToLRType,
@@ -293,11 +303,12 @@ mappings = {
              "itemsToTopicLRType" : itemsToTopicLRType,
              "KCsToTopics" : KCsToTopics,
              "KCsToTopicLRType" : KCsToTopicLRType,
-             "topicLRTypeToKCs" : topicLRTypeToKCs,
              "itemProcessingThresholds" : itemProcessingThresholds,
+             "itemHasMath" : itemHasMath,
              "itemsToLinks" : itemsToLinks,
              "itemsToSourceLinks" : itemsToSourceLinks,
              "topicsToSummaryLinks" : topicsToSummaryLinks,
+             "topicsToSourceLinks" : topicsToSourceLinks,
              "topicsToNEETsLinks" : topicsToNEETsLinks,
              "topicOrder" : topicOrder }
 
@@ -332,7 +343,6 @@ allData = { "actor" :{
 }
 
 allDataJSON = json.dumps(allData,cls=SetEncoder)
-
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 

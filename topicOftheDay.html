@@ -35,26 +35,246 @@ body, html {width: 100%; height: 100%; margin: 0; padding: 0}
 <div class="myIframe">
 <iframe id="displayedContent" src="" frameborder="0" style="overflow:hidden" sandbox="allow-top-navigation allow-scripts allow-forms"></iframe>
 </div>
-<button onclick="finishCurContent()">Finish</button>
+<button onclick="finishCurContent()">Next</button>
 <script type="text/javascript">
+var ATDRC = "autotutor deep reasoning conversations";
+var CB = "circuit basics";
+var CR = "circuit reasoning";
+var ATKCC = "autotutor knowledge check conversations";
+var DRAGOON = "dragoon modeling";
+var EL = "electronic laws";
+var TS = "topic summary";
+
+var topicSummaryReadingLowThreshold = 5000; //5 seconds, in milliseconds
+var highPerformanceThreshold = 0.7;
+var lowPerformanceThreshold = 0.3;
 var queryString = window.location.search;
 $("#displayedContent").attr("src","http://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
-window.addEventListener('message',function(event){
-  console.log("received message: " + event.data);
-},false);
-var curStudentEmail = "mailto:<?php echo $USER->email ?>";
+var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
 console.log("test var is: " + curStudentEmail);
 finishCurContent = function(){
   console.log("pressed finish");
+  //sendCompleted(lr,problemID);
+  var topic = getTopicOfTheDay();
+  var mappingsAndDifficulties = getMappingsAndDifficulties();
+  window.mappingsAndDifficulties = mappingsAndDifficulties;
+  var result = getLastLRTypeAndItemCompleted(curStudentEmail,mappingsAndDifficulties);
+  var lastLRTypeCompleted = result[0];
+  var lastItem = result[1];
+  console.log("lastLRTypeCompleted: " + lastLRTypeCompleted + ", item: " + lastItem);
+  //var nextThingToDoLink = getNextThingToDo(curStudentEmail,topic,lastLRTypeCompleted,lastItem,mappingsAndDifficulties);
+  //$("#displayedContent").attr("src",nextThingToDoLink + queryString);
+}
+
+getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,mappingsAndDifficulties){
+  switch(lastLRTypeCompleted){
+    case TS:
+      //launch ATDRC
+      return getLinkFromTopicLRType(topic,ATDRC,mappingsAndDifficulties);
+      break;
+    case ATDRC:
+      var performanceScore = getATDRCPerformanceScore(curStudentEmail);
+      if(performanceScore > highPerformanceThreshold){
+        //launch DRAGOON
+        return getLinkFromTopicLRType(topic,DRAGOON,mappingsAndDifficulties);
+      }else if(performanceScore < lowPerformanceThreshold){
+        var LRType;
+        var thingsToDo = [];
+        //check reading time below threshold
+        var lastTopicSummaryReadingTimeBelowThreshold = getLastTopicSummaryReadingTimeBelowThreshold(curStudentEmail);
+        if(lastTopicSummaryReadingTimeBelowThreshold){
+          thingsToDo.push(TS);
+        }
+
+        //check student has trouble interpreting circuits (no PnQs)
+        var pnqs = getPnQs(curStudentEmail,lastItem);
+        if(pnqs.length==0){
+          //launch CB/BEETLE
+          thingsToDo.push(CB);
+        }
+
+        //check trouble with math operations
+        var scoreOnMathItems = getScoreOnMathItems(curStudentEmail,mappingsAndDifficulties);
+        if(scoreOnMathItems < lowPerformanceThreshold){
+          thingsToDo.push(EL);
+        }
+
+        switch(thingsToDo.length){
+          case 1:
+            //Just do the one we have
+            LRType = thingsToDo[0];
+            break;
+          case 0:
+            //Pick one randomly
+            thingsToDo.push(TS);
+            thingsToDo.push(CB);
+            thingsToDo.push(EL);
+          default:
+            //select one of existing randomly
+            var thingToDo = getRandomArrayValue(thingsToDo);
+            LRType = thingToDo;
+            break;
+        }
+        return getLinkFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+      }else{ //lowPerformanceThreshold < performanceScore < highPerformanceThreshold
+        var topicLRType = topic + "," + CR;
+        var missedKCs = getKCsMissedFromATDRCStep(topic,curStudentEmail,mappingsAndDifficulties);
+        //TODO finish
+      }
+      break;
+    default:
+      //If we find nothing we haven't started this topic yet, initiate Topic Summary
+      var LRType = TS;
+      return getLinkFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+  }
+}
+
+getKCsMissedFromATDRCStep = function(topic,curStudentEmail,mappingsAndDifficulties){
+  //TODO
+  //
+}
+
+getScoreOnMathItems = function(curStudentEmail,mappingsAndDifficulties){
+  console.log("getScoreOnMathItems");
+  var itemHasMath = mappingsAndDifficulties['mappings']['itemHasMath'];
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match":
+        { "$and": [
+            {"statement.verb.id": "https://umiis.github.io/ITSProfile/verbs/SaveKCScore" },
+            {"statement.actor.mbox": curStudentEmail},
+        ]}
+    },
+    {
+      "$project": {
+          "kcScore": "$statement.result.score.scaled",
+          "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]}
+      }
+    }
+  ]);
+  var ret = wrapper.getStatementsAgg(search);
+  var avgKCScore = 0;
+  var numKCs = 0;
+  for(var index in ret){
+    var scoreDict = ret[index];
+    var item = scoreDict['problemID'].toLowerCase();
+    if(itemHasMath[item]){
+      var score = scoreDict['kcScore'];
+      avgKCScore += score;
+      numKCs += 1;
+    }
+  }
+  if(numKCs != 0){
+    avgKCScore = avgKCScore / numKCs;
+  }
+  console.log("avg score on math items: " + avgKCScore);
+  return avgKCScore;
+}
+
+getLinkFromTopicLRType = function(topic,LRType,mappingsAndDifficulties){
+  if(LRType === TS){
+    var topicsToSourceLinks = mappingsAndDifficulties['mappings']['topicsToSourceLinks'];
+    return topicsToSourceLinks[topic];
+  }else{
+    var topicLRTypeToItems = mappingsAndDifficulties['mappings']['topicLRTypeToItems'];
+    var itemsToSourceLinks = mappingsAndDifficulties['mappings']['itemsToSourceLinks'];
+    var topicLRType = topic + "," + LRType;
+    var itemsToChooseFrom = topicLRTypeToItems[topicLRType];
+    console.log("topicLRType: " + topicLRType + ", itemsToChooseFrom: " + JSON.stringify(itemsToChooseFrom));
+    var item = getRandomArrayValue(itemsToChooseFrom);
+    var link = itemsToSourceLinks[item];
+    return link;
+  }
+}
+
+getTopicOfTheDay = function(){
+  //TODO
+}
+
+getLastTopicSummaryReadingTimeBelowThreshold = function(curStudentEmail){
+  console.log("getLastTopicSummaryReadingTimeBelowThreshold");
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match":
+        { "$and": [
+            {"statement.verb.id": "http://adlnet.gov/expapi/verbs/completed" },
+            {"statement.actor.mbox": curStudentEmail},
+        ]}
+    },
+    {
+      "$sort":
+        {
+            "timestamp": -1
+        }
+    },
+    {
+      "$project": {
+          "timeTaken": "$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.timeTaken",
+          "learningResource" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 0]}
+      }
+    },
+    {
+        "$match" :{
+         "learningResource" : "Topic Summary"
+        }
+    },
+    {
+      "$limit" : 1
+    }
+  ]);
+  var ret = wrapper.getStatementsAgg(search);
+  return ret[0].timeTaken < topicSummaryReadingLowThreshold;
+}
+
+getATDRCPerformanceScore = function(curStudentEmail){
+  //TODO
+}
+
+getPnQs = function(curStudentEmail,lastItem){
+  console.log("lastItem: " + lastItem);
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match":
+        {"$and": [
+          {"statement.verb.id":"https://umiis.github.io/ITSProfile/Activity/view"},
+          {"statement.actor.mbox" : curStudentEmail },
+          {"statement.object.definition.extensions.https://umiis&46;github&46;io/ITSProfile/view.objectType" : "PnQ"},
+          {"statement.object.definition.extensions.https://umiis&46;github&46;io/ITSProfile/view.problemID" : lastItem }
+        ]}
+    },
+    {
+      "$project": {
+        "timeTaken":"$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.timeTaken",
+        "question" : "$statement.object.definition.extensions.https://umiis&46;github&46;io/ITSProfile/view.question",
+        "answer" : "$statement.object.definition.extensions.https://umiis&46;github&46;io/ITSProfile/view.answer"
+      }
+    }
+  ]);
+  var ret = ADL.XAPIWrapper.getStatementsAgg(search);
+  return ret;
+}
+
+getLastLRTypeAndItemCompleted = function(curStudentEmail,mappingsAndDifficulties){
   setRegAPIConfig();
-  var search = ADL.searchParams();
+  var search = ADL.XAPIWrapper.searchParams();
   search['verb'] = "http://adlnet.gov/expapi/verbs/completed";
-  search['actor'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
+  search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
   search['limit'] = 1;
   var ret = wrapper.getStatements(search);
-  var SKOTitle = ret['statements'][0]['context']["extensions"]["http://autotutor&46;x-in-y&46;com/AT"]["SKOTitle"];
-  var lr = SKOTitle.split(':')[0]
-  //sendCompleted(lr,problemID);
+  var SKOTitle = ret['statements'][0]['context']["extensions"]["http://autotutor.x-in-y.com/AT"]["SKOTitle"]; //TODO make sure to gen this statement on finish button click
+  var lr = SKOTitle.split(':')[0];
+  var lastItem = SKOTitle.split(':')[1];
+  console.log("lr: " + lr + ", lastItem: " + lastItem);
+  return [lr.toLowerCase(),lastItem];
 }
 </script>
 </html>
