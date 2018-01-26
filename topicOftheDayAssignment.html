@@ -1,0 +1,60 @@
+
+
+<?php
+    require_once("../config.php");
+    require_login();
+?>
+<html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript" src="./lib/cryptojs_v3.1.2.js"></script>
+<script type="text/javascript" src="./lib/verbs.js"></script>
+<script type="text/javascript" src="./lib/xapi-launch.js"></script>
+<script type="text/javascript" src="./lib/xapi-util.js"></script>
+<script type="text/javascript" src="./lib/xapistatement.js"></script>
+<script type="text/javascript" src="./lib/xapiwrapper.js"></script>
+<script src="./lib/myxapiclient.js"></script>
+<body>
+  <table>
+    <tr>
+      <td>Topic:</td>
+      <td><select id="topicSelections"></select></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><button onclick="submitTopicOfTheDay()">Submit</button></td>
+    </tr>
+  </table>
+</body>
+<script>
+function size_dict(d){
+  c=0;
+  for (i in d)
+    ++c;
+  return c
+}
+var mappingsAndDifficulties
+window.onload = function(){
+  //Query for topics in mappings
+  mappingsAndDifficulties = getMappingsAndDifficulties();
+  topics = mappingsAndDifficulties['mappings']['topicOrder'];
+  window.topics = topics;
+  console.log("topics: " + JSON.stringify(topics));
+  for(var index = 0; index < size_dict(topics); index++){
+    $("#topicSelections")[0].options[index] = new Option(topics[index],topics[index]);
+  }
+}
+submitTopicOfTheDay = function(){
+  var topic = $("#topicSelections").find(":selected").text();
+  console.log("Selected topic: " + topic);
+  var studentEmails = getStudentEmails();
+  sendTopicAssignment(studentEmails,topic);
+}
+
+getStudentEmails = function(){
+  var emails = [];
+  //TODO fill out to query LMS somehow
+  emails.push("andrew.tackett@gmail.com");
+  return emails;
+}
+</script>
+</html>

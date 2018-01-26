@@ -190,8 +190,83 @@ getLinkFromTopicLRType = function(topic,LRType,mappingsAndDifficulties){
   }
 }
 
-getTopicOfTheDay = function(){
+getTopicOfTheDay = function(curStudentEmail,mappingsAndDifficulties){
   //TODO
+  curStudentEmail = "mailto:asdf@asdf.com";
+  var topicsAssigned = getTopicsAssigned(curStudentEmail);
+
+  var completedItems = getCompletedItems(curStudentEmail);
+
+  if(topicsAssigned.length == 0){
+    console.log("error getting topics assigned");
+    
+  }else{
+    if(completedItems.length == 0){
+      //goto first topic in topic order?
+    }
+  }
+
+}
+
+getTopicsAssigned = function(curStudentEmail){
+    setAggAPIConfig();
+    var search = ADL.XAPIWrapper.searchParamsAgg();
+    search['pipeline'] = JSON.stringify([
+      {
+        "$match": {
+          "$and": [
+            {"statement.verb.id": "http://activitystrea.ms/schema/1.0/assign"},
+            {"statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.target.mbox": curStudentEmail }
+          ]
+        }
+      },
+      {
+        "$project": {
+          "topic" : "$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.topic",
+          "timestamp" : "$statement.timestamp"
+        }
+      },
+      {
+        "$sort" : {
+          "timestamp" : -1
+        }
+      }
+    ]);
+
+    var topicsAssigned = wrapper.getStatementsAgg(search);
+
+    return topicsAssigned;
+}
+
+getCompletedItems = function(curStudentEmail){
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match": {
+        "$and": [
+          {"statement.verb.id": "http://adlnet.gov/expapi/verbs/completed"},
+          {"statement.actor.mbox": curStudentEmail }
+        ]
+      }
+    },
+    {
+      "$project": {
+        "learningResource" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 0]},
+        "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]},
+        "timestamp" : "$statement.timestamp"
+      }
+    },
+    {
+      "$sort" : {
+        "timestamp" : -1
+      }
+    }
+  ]);
+
+  var completedItems = wrapper.getStatementsAgg(search);
+
+  return completedItems;
 }
 
 getLastTopicSummaryReadingTimeBelowThreshold = function(curStudentEmail){

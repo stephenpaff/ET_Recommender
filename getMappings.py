@@ -81,7 +81,7 @@ for i in range(0,df.shape[0]):
         dictAll[topic][learningResource] = {}
     if item not in dictAll[topic][learningResource]:
         dictAll[topic][learningResource][item] = []
-    for j in range(6,df.shape[1]):
+    for j in range(7,df.shape[1]):
         if(row[j] == '1'):
             dictAll[topic][learningResource][item].append(columns[j].lower())
 
@@ -344,8 +344,8 @@ allData = { "actor" :{
 
 allDataJSON = json.dumps(allData,cls=SetEncoder)
 
+
+
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
-
 r = requests.post(lrsURL,data=allDataJSON, headers=headers)
-
 print(r.text)
