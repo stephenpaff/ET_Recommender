@@ -63,6 +63,8 @@ for i in range(0,df.shape[0]):
     item = row[0].lower()
     topic = row[1].lower()
     learningResource = row[2].lower()
+#    if("skill builder" not in learningResource):
+#        continue
     lrType = row[3].lower()
     link = row[4]
     sourceLink = row[5]
@@ -134,6 +136,7 @@ for topic in dictAll:
 
 itemsToTopic = {} #Used
 for topic in dictAll:
+    itemsToTopic[topic] = topic
     for learningResource in dictAll[topic]:
         for item in dictAll[topic][learningResource]:
             itemsToTopic[item] = topic
@@ -170,6 +173,8 @@ itemsToLRType = {}
 for item in itemsToLR:
     lr = list(itemsToLR[item])[0]
     itemsToLRType[item] = lrToLRType[lr]
+for topic in topicsToSummaryLinks:
+    itemsToLRType[topic] = "Topic Summary".lower()
 
 itemsToTopicLRType = {}
 for item in itemsToLRType:
@@ -344,8 +349,11 @@ allData = { "actor" :{
 
 allDataJSON = json.dumps(allData,cls=SetEncoder)
 
-
+#with open('kcMappings.json','w') as outfile:
+#    json.dump(itemsToKCs,outfile,cls=SetEncoder)
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
+
 r = requests.post(lrsURL,data=allDataJSON, headers=headers)
+
 print(r.text)
