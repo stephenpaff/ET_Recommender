@@ -1,0 +1,67 @@
+<?php
+    require_once("../config.php");
+    require_login();
+?>
+<html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript" src="./lib/cryptojs_v3.1.2.js"></script>
+<script type="text/javascript" src="./lib/verbs.js"></script>
+<script type="text/javascript" src="./lib/xapi-launch.js"></script>
+<script type="text/javascript" src="./lib/xapi-util.js"></script>
+<script type="text/javascript" src="./lib/xapistatement.js"></script>
+<script type="text/javascript" src="./lib/xapiwrapper.js"></script>
+<script src="./lib/myxapiclient.js"></script>
+<style>
+textarea {
+    width: 100%;
+    -webkit-box-sizing: border-box; /* <=iOS4, <= Android  2.3 */
+       -moz-box-sizing: border-box; /* FF1+ */
+            box-sizing: border-box; /* Chrome, IE8, Opera, Safari 5.1*/
+}
+</style>
+<table width="33%">
+  <tr>
+    <td>Topic</td><td><select id='topicSelect'><select></td>
+  </tr>
+  <tr>
+    <td>Learning Resource</td><td><select id='lrSelect'><select></td>
+  </tr>
+  <tr>
+    <td colspan=2><textarea rows=15 id='feedback'></textarea></td>
+  </tr>
+  <tr>
+    <td><button onclick='submitFeedback()'>Submit</button></td>
+  </tr>
+</table>
+<p id='output'></p>
+
+<script>
+window.cb = function(){
+  console.log("in window.cb");
+  mappingsAndDifficulties = getMappingsAndDifficulties();
+  var itemsToTopic = mappingsAndDifficulties["mappings"]["itemsToTopic"];
+  var itemsToLRType = mappingsAndDifficulties["mappings"]["itemsToLRType"];
+  setRegAPIConfig();
+  var search = ADL.XAPIWrapper.searchParams();
+  search['verb'] = "https://umiis.github.io/ITSProfile/verbs/SaveKCScore";
+  search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
+  search['limit'] = 1;
+  var ret = ADL.XAPIWrapper.getStatements(search);
+  window.ret = ret;
+  try{
+    var SKOTitleSplit = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":");
+    var lastItem = SKOTitleSplit[1].toLowerCase();
+    lastLRType = itemsToLRType[lastItem];
+    lastTopic = itemsToTopic[lastItem];
+  }catch{
+    lastTopic = "Series/Parallel Combination";
+    lastLRType = "Topic Summary";
+  }
+}
+var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
+submitFeedback = function(){
+  var feedback = $("#feedback").val();
+  console.log(lastTopic + ":" + lastLRType);
+}
+</script>
+</html>
