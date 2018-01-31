@@ -19,12 +19,6 @@ log = function(msg){
   }
 }
 
-function toTitleCase(str) {
-    return str.replace(/(?:^|\s)\w/g, function(match) {
-        return match.toUpperCase();
-    });
-}
-
 genButtonsFromRecommendations = function(recommendations,mappingsAndDifficulties){
   var itemsToLinks = mappingsAndDifficulties['mappings']['itemsToLinks'];
   var topicsToSummaryLinks = mappingsAndDifficulties['mappings']['topicsToSummaryLinks'];
@@ -264,49 +258,6 @@ var checkBelowProcessingTimeThreshold = function(curStudentEmail,mappingsAndDiff
   }
 }
 
-getKCScores = function(curStudentEmail){
-  try{
-    setAggAPIConfig();
-    var search = ADL.XAPIWrapper.searchParamsAgg();
-
-    search['pipeline'] = JSON.stringify([
-      {
-        "$match":
-          {"$and": [
-            {"statement.verb.id":"https://umiis.github.io/ITSProfile/verbs/SaveKCScore"},
-            {"statement.actor.mbox" : curStudentEmail}
-          ]}
-      },
-      {
-        "$project": {
-          "kc":"$statement.result.response",
-          "score":"$statement.result.score.scaled",
-        }
-      },
-      {
-        "$group":{
-          "_id" : "$kc",
-          "avg" : { "$avg" : "$score"}
-        }
-      }
-    ]);
-
-    var ret = ADL.XAPIWrapper.getStatementsAgg(search);
-    if(ret){
-      var kcScores = {};
-      for(var index in ret){
-        var name = ret[index]["_id"];
-        var score = ret[index]["avg"];
-        kcScores[name] = score;
-      }
-      log("kcScores: " + JSON.stringify(kcScores));
-      return kcScores;
-    }
-  }catch(e){
-    log("error getting records: " + e);
-  }
-}
-
 //Update and store calculated attributes
 populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
   curUserData = {};
@@ -528,85 +479,6 @@ recommendationRules = {
     }
 }
 
-getItemFromTopicLRTypeWithZPDAlgorithm = function(topicLRType, curUserData,mappingsAndDifficulties, recommendationsArr){
-  //Handle no items for topic summary
-  if(topicLRType.indexOf(TS.toLowerCase()) != -1){
-    recommendationsArr.push(topicLRType + ",");
-  }else{
-    log("getItemFromTopicLRTypeWithZPDAlgorithm");
-    var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType];
-    log("topicLRType: " + topicLRType + ", items: " + JSON.stringify(items));
-    var items = getItemsViaZPDAlgorithm(1,items,curUserData,mappingsAndDifficulties);
-    for(var index in items){
-      recommendationsArr.push(items[index]);
-    }
-  }
-}
-
-//Returns "topic,LRType,item" - comma separated string
-getItemsViaZPDAlgorithm = function(numItemsToGet,items,curUserData,mappingsAndDifficulties){
-  log("getItemsViaZPDAlgorithm");
-  var itemScores = calcScoresForZPDAlgorithm(items,curUserData,mappingsAndDifficulties);
-  log("itemScores: " + JSON.stringify(itemScores));
-  var itemsToTopicLRType = mappingsAndDifficulties['mappings']['itemsToTopicLRType'];
-  var itemsSorted = Object.keys(itemScores).map(function(key) {
-      return [key, itemScores[key]];
-  });
-
-  itemsSorted.sort(function(first, second) {
-      return first[1] - second[1];
-  });
-
-  itemsSorted = itemsSorted.slice(0, numItemsToGet);
-
-  var items = [];
-  for(var index in itemsSorted){
-    var item = itemsSorted[index][0];
-    var topicLRType = itemsToTopicLRType[item];
-    items.push(topicLRType + "," + item);
-  }
-
-  log("items: " + JSON.stringify(items));
-  return items;
-}
-
-calcScoresForZPDAlgorithm = function(items, curUserData,mappingsAndDifficulties){
-  log("calcScoresForZPDAlgorithm");
-  var itemDifficulties = mappingsAndDifficulties["difficulties"]["itemDifficulties"];
-  var kcDifficulties = mappingsAndDifficulties["difficulties"]["kcDifficulties"];
-  var itemsToKCs = mappingsAndDifficulties["mappings"]["itemsToKCs"];
-
-  var itemScores = {};
-
-  for(var index in items){
-    var item = items[index];
-    log("item: " + item);
-    var kcsForItem = itemsToKCs[item];
-    log("kcsForItem: " + JSON.stringify(kcsForItem));
-    var avgKCScore = 0;
-    var numKCs = 0;
-    for(kc in kcsForItem){
-      if(!!curUserData.kcScores[kc]){
-        avgKCScore += curUserData.kcScores[kc];
-        numKCs += 1;
-      }
-    }
-    //Handle case where user hasn't encountered any of the kcs for the item in question
-    if(numKCs != 0){
-      avgKCScore = avgKCScore / numKCs;
-    }
-    var projectedPerformanceScore = avgKCScore;
-    var itemDifficulty = itemDifficulties[item];
-    var value = Math.pow(projectedPerformanceScore - itemDifficulty,2);
-    itemScores[item] = value;
-    log("projectedPerformanceScore: " + projectedPerformanceScore);
-    log("itemDifficulty: " + itemDifficulty);
-    log("value: " + value);
-  }
-
-  return itemScores;
-}
-
 getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,recommendationsArr){
   log("getRandomItemFromTopicLRType: " + topicLRType);
   var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType]
@@ -616,14 +488,14 @@ getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,reco
   }
 }
 
-setTimeout(function(){
-
+//window.cb is called by myxapiclient.js after the xapi wrapper is initialized
+window.cb = function(){
   var curStudentEmail = "mailto:xhu@memphis.edu";//"mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
   log("curStudentEmail: " + curStudentEmail);
   var mappingsAndDifficulties = getMappingsAndDifficulties();
   var recommendations = getRecommendations(curStudentEmail,mappingsAndDifficulties);
   genButtonsFromRecommendations(recommendations,mappingsAndDifficulties);
   log("recommendation: " + JSON.stringify(recommendations));
-},1000);
+};
 </script>
 </html>

@@ -31,7 +31,9 @@ body, html {width: 100%; height: 100%; margin: 0; padding: 0}
      width: 100%;
      height: 100%;
 }
+<br />\
 </style>
+<h1 id="topicAndLR" style="text-align: center;"></h1>
 <div class="myIframe">
 <iframe id="displayedContent" src="" frameborder="0" style="overflow:hidden" sandbox="allow-top-navigation allow-scripts allow-forms"></iframe>
 </div>
@@ -45,7 +47,6 @@ var DRAGOON = "dragoon modeling";
 var EL = "electronic laws";
 var TS = "topic summary";
 var completedTopicOfTheDayLink = "https://tokyo.x-in-y.com/hostedResources/general/completedTopicOfTheDay.html";
-
 var topicSummaryReadingLowThreshold = 5000; //5 seconds, in milliseconds
 var highPerformanceThreshold = 0.7;
 var lowPerformanceThreshold = 0.3;
@@ -53,55 +54,91 @@ var queryString = window.location.search;
 var curTopic = null;
 var curLR = null;
 var curProblemID = null;
-$("#displayedContent").attr("src","http://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
-var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
-console.log("test var is: " + curStudentEmail);
+var curStudentEmail;
+var mappingsAndDifficulties;
+console.log("curStudentEmail: " + curStudentEmail);
+
+//Initializing tracking state from LRS
+//window.cb is called by myxapiclient.js after the xapi wrapper is initialized
+window.cb = function(){
+  curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
+  mappingsAndDifficulties = getMappingsAndDifficulties();
+  window.mappingsAndDifficulties = mappingsAndDifficulties;
+  $("#displayedContent").attr("src","http://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
+  findNextAssignmentAndUpdatePage();
+}
 finishCurContent = function(){
   console.log("pressed finish");
   if(curLR && curProblemID){ //Tracking state is in memory, we've been on this page for a bit
     sendCompleted(curLR,curProblemID);
-  }else{ //Need to figure out place from LRS
-    //TODO
+    findNextAssignmentAndUpdatePage();
+  }else{
+    //There's some kind of problem
+    console.log("error: one of these is undefined - curLR: " + curLR + ", curProblemID: " + curProblemID);
   }
-  var mappingsAndDifficulties = getMappingsAndDifficulties();
-  window.mappingsAndDifficulties = mappingsAndDifficulties;
+}
+
+findNextAssignmentAndUpdatePage = function(){
   var result = getLastLRTypeAndItemCompleted(curStudentEmail,mappingsAndDifficulties);
   var lastLRTypeCompleted = result[0].toLowerCase();
   var lastItemCompleted = result[1].toLowerCase();
   curTopic = getTopicOfTheDay(lastItemCompleted,curStudentEmail,mappingsAndDifficulties);
-  getKCsMissedFromATDRCStep(curTopic,curStudentEmail,mappingsAndDifficulties);
   console.log("lastLRTypeCompleted: " + lastLRTypeCompleted + ", item: " + lastItemCompleted + ", topic: " + curTopic);
-  //var nextThingToDoLink = getNextThingToDo(curStudentEmail,topic,lastLRTypeCompleted,lastItem,mappingsAndDifficulties);
+  var nextThingToDoArr = getNextThingToDo(curStudentEmail,curTopic,lastLRTypeCompleted,lastItemCompleted,mappingsAndDifficulties);
+  var nextThingToDoLink = nextThingToDoArr[0];
+  curLR = nextThingToDoArr[1];
+  curProblemID = nextThingToDoArr[2];
+  console.log("nextThingToDoLink: " + nextThingToDoLink);
+  var topicAndLR = curTopic + " - " + curLR;
+  topicAndLR = toTitleCase(topicAndLR);
+  $("#topicAndLR").text(topicAndLR);
   //$("#displayedContent").attr("src",nextThingToDoLink + queryString);
 }
 
 getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,mappingsAndDifficulties){
+  //We will fill in these items and return them eventually
   var nextThingToDoLink;
+  var nextLRType;
+  var nextProblemID;
+  console.log("getNextThingToDo, lastLRTypeCompleted: " + lastLRTypeCompleted);
   switch(lastLRTypeCompleted){
     case TS:
       //launch ATDRC
-      nextThingToDoLink = getLinkFromTopicLRType(topic,ATDRC,mappingsAndDifficulties);
+      var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,ATDRC,mappingsAndDifficulties);
+      nextThingToDoLink = nextThingToDoArr[0];
+      nextProblemID = nextThingToDoArr[1];
+      nextLRType = ATDRC;
       //Handle first three topics which have no ATDRC problems
       if(!nextThingToDoLink){
-        nextThingToDoLink = getLinkFromTopicLRType(topic,ATKCC,mappingsAndDifficulties);
+        nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,ATKCC,mappingsAndDifficulties);
+        nextThingToDoLink = nextThingToDoArr[0];
+        nextProblemID = nextThingToDoArr[1];
+        nextLRType = ATKCC;
       }
       break;
     case ATDRC:
-      var performanceScore = getATDRCPerformanceScore(curStudentEmail);
+    case ATKCC:
+      var performanceScore = getATDRCPerformanceScore(topic,curStudentEmail,mappingsAndDifficulties);
+      console.log("ATDRCPerformanceScore: " + performanceScore);
       if(performanceScore > highPerformanceThreshold){
         //launch DRAGOON
-        nextThingToDoLink = getLinkFromTopicLRType(topic,DRAGOON,mappingsAndDifficulties);
+        var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,DRAGOON,mappingsAndDifficulties);
+        nextThingToDoLink = nextThingToDoArr[0];
+        nextProblemID = nextThingToDoArr[1];
+        nextLRType = DRAGOON;
       }else if(performanceScore < lowPerformanceThreshold){
         var LRType;
         var thingsToDo = [];
         //check reading time below threshold
         var lastTopicSummaryReadingTimeBelowThreshold = getLastTopicSummaryReadingTimeBelowThreshold(curStudentEmail);
+        console.log("lastTopicSummaryReadingTimeBelowThreshold: " + lastTopicSummaryReadingTimeBelowThreshold);
         if(lastTopicSummaryReadingTimeBelowThreshold){
           thingsToDo.push(TS);
         }
 
         //check student has trouble interpreting circuits (no PnQs)
         var pnqs = getPnQs(curStudentEmail,lastItem);
+        console.log("pnqs: " + JSON.stringify(pnqs));
         if(pnqs.length==0){
           //launch CB/BEETLE
           thingsToDo.push(CB);
@@ -121,42 +158,196 @@ getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,m
           case 0:
             //Pick one randomly
             thingsToDo.push(TS);
-            thingsToDo.push(CB);
             thingsToDo.push(EL);
+            thingsToDo.push(CB);
           default:
             //select one of existing randomly
             var thingToDo = getRandomArrayValue(thingsToDo);
             LRType = thingToDo;
             break;
         }
-        nextThingToDoLink = getLinkFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+        console.log("gettingLink, topic: " + topic + ", LRType: " + LRType);
+        var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+        nextThingToDoLink = nextThingToDoArr[0];
+        nextProblemID = nextThingToDoArr[1];
+        nextLRType = LRType;
       }else{ //lowPerformanceThreshold < performanceScore < highPerformanceThreshold
-        var topicLRType = topic + "," + CR;
-        var missedKCs = getKCsMissedFromATDRCStep(topic,curStudentEmail,mappingsAndDifficulties);
-        //TODO finish
+        var itemsToSourceLinks = mappingsAndDifficulties['mappings']['itemsToSourceLinks'];
+
+        if(checkIfCRForTopic(topic,mappingsAndDifficulties)){
+           var topicLRType = topic + "," + CR;
+           var missedKCs = getKCsMissedFromATDRCStep(topic,curStudentEmail,mappingsAndDifficulties);
+           //TODO tidy this up a bit and refactor getItemFromTopicLRTypeWithZPDAlgorithm to use kcScores directly
+           curUserData = {};
+           curUserData["kcScores"] = getKCScores(curStudentEmail);
+           var itemArr = [];
+           getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType, curUserData,mappingsAndDifficulties, itemArr);
+           nextProblemID = itemArr[0];
+           nextThingToDoLink = itemsToSourceLinks[nextProblemID];
+           nextLRType = CR;
+        }else{ //If we don't have a circuit reasoning problem for this topic then
+        //randomly pick a knowledge check question instead
+          var LRType = ATKCC;
+          var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+          nextThingToDoLink = nextThingToDoArr[0];
+          nextProblemID = nextThingToDoArr[1];
+          nextLRType = LRType;
+        }
       }
       break;
     case DRAGOON:
     case CR:
     case CB:
     case EL:
-      nextThingToDoLink = completedTopicOfTheDayLink;
+      console.log("went through bundle once already");
+      var arr = getNumLRUsedAndPerformanceScoreForThisTopic(topic,curStudentEmail,mappingsAndDifficulties);
+      var numLRUsed = arr[0];
+      var performanceScore = arr[1];
+      console.log("numLRUsed: " + numLRUsed);
+      if(numLRUsed>=3 && performanceScore > highPerformanceThreshold){
+        var topicsAssigned = getTopicsAssigned(curStudentEmail);
+        //Note: if topic isn't found in assignment index then we will naturally
+        //revert to the first topic assigned (topicsAssigned[0])
+        var nextTopicIndex = topicsAssigned.indexOf(topic) + 1;
+
+        //If we reach the end of the assigned topics list then the student is directed
+        //to a completion page and prompted to take a look at recommendations
+        if(nextTopicIndex == topicsAssigned.length){
+          nextThingToDoLink = completedTopicOfTheDayLink;
+          nextProblemID = "";
+          nextLRType = "";
+        }else{ //Otherwise student was behind, proceed to next assigned topic
+          var nextTopic = topicsAssigned[nextTopicIndex];
+          var LRType = TS;
+          var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(nextTopic,LRType,mappingsAndDifficulties);
+          nextThingToDoLink = nextThingToDoArr[0];
+          nextProblemID = nextThingToDoArr[1];
+          nextLRType = LRType;
+        }
+      }else{
+        //If the student hasn't used 3 different LR and achieved a mastery threshold
+        //we want to loop them back to the beginning again
+        var LRType = TS;
+        var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+        nextThingToDoLink = nextThingToDoArr[0];
+        nextProblemID = nextThingToDoArr[1];
+        nextLRType = LRType;
+      }
       break;
     default:
+      console.log("default nextThingToDoCase, lastLRTypeCompleted: " + lastLRTypeCompleted)
       //If we find nothing we haven't started this topic yet, initiate Topic Summary
       var LRType = TS;
-      nextThingToDoLink = getLinkFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+      var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,LRType,mappingsAndDifficulties);
+      nextThingToDoLink = nextThingToDoArr[0];
+      nextProblemID = nextThingToDoArr[1];
+      nextLRType = LRType;
   }
   if(!nextThingToDoLink){
+    console.log("catch all error with getting link, link undefined");
     //handle errors
       nextThingToDoLink = completedTopicOfTheDayLink;
   }
 
-  return nextThingToDoLink;
+  return [nextThingToDoLink,nextLRType,nextProblemID];
+}
+
+checkIfCRForTopic = function(topic,mappingsAndDifficulties){
+  var topicLRTypeToItems = mappingsAndDifficulties['mappings']['topicLRTypeToItems'];
+  var items = topicLRTypeToItems[topic + "," + CR];
+  return !!items;
+}
+
+getNumLRUsedAndPerformanceScoreForThisTopic = function(topic,curStudentEmail,mappingsAndDifficulties){
+  var itemsToLRType = mappingsAndDifficulties['mappings']['itemsToLRType'];
+  var itemsToTopic = mappingsAndDifficulties['mappings']['itemsToTopic'];
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match":
+        { "$and": [
+            {"statement.verb.id": "https://umiis.github.io/ITSProfile/verbs/SaveKCScore" },
+            {"statement.actor.mbox": curStudentEmail},
+        ]}
+    },
+    {
+      "$project": {
+          "kcScore": "$statement.result.score.scaled",
+          "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]}
+      }
+    }
+  ]);
+  var ret = wrapper.getStatementsAgg(search);
+  var lrUsed = new Set();
+  var avgKCScore = 0;
+  var numKCs = 0;
+  for(var index in ret){
+    var problemID = ret[index]['problemID'].toLowerCase();
+    console.log("problemID: " + problemID + ", topic: " + topic);
+    var itemTopic = itemsToTopic[problemID].toLowerCase();
+    console.log("itemTopic: " + itemTopic);
+    if(itemTopic === topic){
+      var lrType = itemsToLRType[problemID];
+      lrUsed.add(lrType);
+      var kcScore = ret[index]['kcScore'];
+      avgKCScore += kcScore;
+      numKCs += 1;
+    }
+  }
+  if(numKCs > 0){
+    avgKCScore /= numKCs;
+  }
+
+  return [lrUsed.size,avgKCScore];
+}
+
+getATDRCPerformanceScore = function(topic, curStudentEmail, mappingsAndDifficulties){
+  var itemsToLRType = mappingsAndDifficulties['mappings']['itemsToLRType'];
+  var itemsToTopic = mappingsAndDifficulties['mappings']['itemsToTopic'];
+
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match":
+        { "$and": [
+            {"statement.verb.id": "https://umiis.github.io/ITSProfile/verbs/SaveKCScore" },
+            {"statement.actor.mbox": curStudentEmail},
+        ]}
+    },
+    {
+      "$project": {
+          "kcScore": "$statement.result.score.scaled",
+          "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]}
+      }
+    }
+  ]);
+  var ret = wrapper.getStatementsAgg(search);
+  var avgKCScore = 0;
+  var numKCs = 0;
+  for(var index in ret){
+    var problemID = ret[index]['problemID'].toLowerCase();
+    console.log("problemID: " + problemID + ", topic: " + topic);
+    var itemTopic = itemsToTopic[problemID].toLowerCase();
+    console.log("itemTopic: " + itemTopic);
+    if(itemTopic === topic){
+      var lrType = itemsToLRType[problemID];
+      if(lrType === ATDRC || lrType === ATKCC){
+        var kcScore = ret[index]['kcScore'];
+        avgKCScore += kcScore;
+        numKCs += 1;
+      }
+    }
+  }
+  if(numKCs > 0){
+    avgKCScore /= numKCs;
+  }
+
+  return avgKCScore;
 }
 
 getKCsMissedFromATDRCStep = function(topic,curStudentEmail,mappingsAndDifficulties){
-  //TODO
   var itemsToLRType = mappingsAndDifficulties['mappings']['itemsToLRType'];
   var itemsToTopic = mappingsAndDifficulties['mappings']['itemsToTopic'];
   var topicLRTypeToKCs = mappingsAndDifficulties['mappings']['topicLRTypeToKCs'];
@@ -183,22 +374,51 @@ getKCsMissedFromATDRCStep = function(topic,curStudentEmail,mappingsAndDifficulti
   var kcsAttempted = [];
   for(var index in ret){
     var problemID = ret[index]['problemID'].toLowerCase();
+    console.log("problemID: " + problemID + ", topic: " + topic);
     var itemTopic = itemsToTopic[problemID].toLowerCase();
+    console.log("itemTopic: " + itemTopic);
     if(itemTopic === topic){
       var lrType = itemsToLRType[problemID];
       if(lrType === ATDRC || lrType === ATKCC){
         var kcName = ret[index]['kcName'];
-        kcsAttempted.push(kcName);
+        kcsAttempted.push(kcName.toLowerCase());
       }
     }
   }
   var allKCs = [];
   var ATDRCKCs = topicLRTypeToKCs[topic + "," + ATDRC];
   var ATKCCKCs = topicLRTypeToKCs[topic + "," + ATKCC];
-  jav
+  allKCs = allKCs.concat(getFlattenedArray(ATDRCKCs));
+  allKCs = allKCs.concat(getFlattenedArray(ATKCCKCs));
+  allKCs = removeDuplicatesFromArray(allKCs);
 
+  //Remove the KCs we've already attempted if they're part of the ones associated
+  //with this topic & ATDRC/ATKCC
+  for(var index in kcsAttempted){
+    var kc = kcsAttempted[index];
+    var kcIndex = allKCs.indexOf(kc);
+    if(kcIndex != -1){
+      allKCs.splice(kcIndex,1);
+    }
+  }
 
-  window.ret = ret;
+  return allKCs;
+}
+
+removeDuplicatesFromArray = function(arr){
+  let s = new Set(arr);
+  let it = s.values();
+  return Array.from(it);
+}
+
+getFlattenedArray = function(arrayToFlatten){
+  var flattened = arrayToFlatten.reduce(function(a, b) {
+    if(Array.isArray(b)){
+      b = getFlattenedArray(b);
+    }
+    return a.concat(b);
+  }, []);
+  return flattened;
 }
 
 getScoreOnMathItems = function(curStudentEmail,mappingsAndDifficulties){
@@ -241,10 +461,11 @@ getScoreOnMathItems = function(curStudentEmail,mappingsAndDifficulties){
   return avgKCScore;
 }
 
-getLinkFromTopicLRType = function(topic,LRType,mappingsAndDifficulties){
+getLinkAndProblemIDFromTopicLRType = function(topic,LRType,mappingsAndDifficulties){
+  //TODO this is a bit hacky and should probably be done better
   if(LRType === TS){
     var topicsToSourceLinks = mappingsAndDifficulties['mappings']['topicsToSourceLinks'];
-    return topicsToSourceLinks[topic];
+    return [topicsToSourceLinks[topic],topic];
   }else{
     var topicLRTypeToItems = mappingsAndDifficulties['mappings']['topicLRTypeToItems'];
     var itemsToSourceLinks = mappingsAndDifficulties['mappings']['itemsToSourceLinks'];
@@ -253,12 +474,11 @@ getLinkFromTopicLRType = function(topic,LRType,mappingsAndDifficulties){
     console.log("topicLRType: " + topicLRType + ", itemsToChooseFrom: " + JSON.stringify(itemsToChooseFrom));
     var item = getRandomArrayValue(itemsToChooseFrom);
     var link = itemsToSourceLinks[item];
-    return link;
+    return [link,item];
   }
 }
 
 getTopicOfTheDay = function(lastItemCompleted,curStudentEmail,mappingsAndDifficulties){
-  //TODO, look through completed topics as well as last completed item?
   var itemsToTopic = mappingsAndDifficulties['mappings']['itemsToTopic'];
   var curTopic = null;
 
@@ -306,37 +526,6 @@ getTopicsAssigned = function(curStudentEmail){
     return topicsAssigned;
 }
 
-// getCompletedItems = function(curStudentEmail){
-//   setAggAPIConfig();
-//   var search = ADL.XAPIWrapper.searchParamsAgg();
-//   search['pipeline'] = JSON.stringify([
-//     {
-//       "$match": {
-//         "$and": [
-//           {"statement.verb.id": "http://adlnet.gov/expapi/verbs/completed"},
-//           {"statement.actor.mbox": curStudentEmail }
-//         ]
-//       }
-//     },
-//     {
-//       "$project": {
-//         "learningResource" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 0]},
-//         "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]},
-//         "timestamp" : "$statement.timestamp"
-//       }
-//     },
-//     {
-//       "$sort" : {
-//         "timestamp" : -1
-//       }
-//     }
-//   ]);
-//
-//   var completedItems = wrapper.getStatementsAgg(search);
-//
-//   return completedItems;
-// }
-
 getLastTopicSummaryReadingTimeBelowThreshold = function(curStudentEmail){
   console.log("getLastTopicSummaryReadingTimeBelowThreshold");
   setAggAPIConfig();
@@ -373,10 +562,6 @@ getLastTopicSummaryReadingTimeBelowThreshold = function(curStudentEmail){
   ]);
   var ret = wrapper.getStatementsAgg(search);
   return ret[0].timeTaken < topicSummaryReadingLowThreshold;
-}
-
-getATDRCPerformanceScore = function(curStudentEmail){
-  //TODO
 }
 
 getPnQs = function(curStudentEmail,lastItem){

@@ -5,7 +5,7 @@
 <p>Topic Summary Text</p>
 
 <br />
-<button onclick="submitFinished()">Finish</button>
+<button id="buttonFinished" onclick="submitFinished()">Finish</button>
 </body>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="../lib/xapiwrapper.min.js"></script>
@@ -15,6 +15,5 @@
 function submitFinished() {
   sendCompleted("Topic Summary","Topic Name");
 }
-
-</script>
+if (window.top != window) { $("#finishButton").css("display","none");console.log("hiding finish button");} </script>
 </html>
