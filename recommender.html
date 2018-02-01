@@ -108,7 +108,7 @@ getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
           //zpd algorithm
           var items = finalRecommendations;
           finalRecommendations = [];
-          items = getItemsViaZPDAlgorithm(3,items,curUserData,mappingsAndDifficulties);
+          items = getItemsViaZPDAlgorithm(3,items,curUserData.kcScores,mappingsAndDifficulties);
           for(var index in items){
             finalRecommendations.push(items[index]);
           }
@@ -443,7 +443,7 @@ recommendationRules = {
               topicLRType += EL;
               break;
           }
-          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,curUserData,mappingsAndDifficulties,recommendations);
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,curUserData.kcScores,mappingsAndDifficulties,recommendations);
         }
       }
 
@@ -471,7 +471,7 @@ recommendationRules = {
               break;
           }
           log("topicLRType: " + topicLRType);
-          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,curUserData,mappingsAndDifficulties,recommendations);
+          getItemFromTopicLRTypeWithZPDAlgorithm(topicLRType,curUserData.kcScores,mappingsAndDifficulties,recommendations);
         }
       }
 
@@ -488,8 +488,7 @@ getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,reco
   }
 }
 
-//window.cb is called by myxapiclient.js after the xapi wrapper is initialized
-window.cb = function(){
+var cb = function(){
   var curStudentEmail = "mailto:xhu@memphis.edu";//"mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
   log("curStudentEmail: " + curStudentEmail);
   var mappingsAndDifficulties = getMappingsAndDifficulties();
@@ -497,5 +496,7 @@ window.cb = function(){
   genButtonsFromRecommendations(recommendations,mappingsAndDifficulties);
   log("recommendation: " + JSON.stringify(recommendations));
 };
+
+startWrapper(cb);
 </script>
 </html>

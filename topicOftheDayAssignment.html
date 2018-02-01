@@ -26,14 +26,8 @@
   </table>
 </body>
 <script>
-function size_dict(d){
-  c=0;
-  for (i in d)
-    ++c;
-  return c
-}
-var mappingsAndDifficulties
-window.onload = function(){
+var mappingsAndDifficulties;
+var cb = function(){
   //Query for topics in mappings
   mappingsAndDifficulties = getMappingsAndDifficulties();
   topics = mappingsAndDifficulties['mappings']['topicOrder'];
@@ -56,5 +50,6 @@ getStudentEmails = function(){
   emails.push("andrew.tackett@gmail.com");
   return emails;
 }
+startWrapper(cb);
 </script>
 </html>

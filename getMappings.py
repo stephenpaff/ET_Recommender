@@ -308,6 +308,7 @@ mappings = {
              "itemsToTopicLRType" : itemsToTopicLRType,
              "KCsToTopics" : KCsToTopics,
              "KCsToTopicLRType" : KCsToTopicLRType,
+             "lrToLRType" : lrToLRType,
              "itemProcessingThresholds" : itemProcessingThresholds,
              "itemHasMath" : itemHasMath,
              "itemsToLinks" : itemsToLinks,
@@ -351,8 +352,6 @@ allDataJSON = json.dumps(allData,cls=SetEncoder)
 
 #with open('kcMappings.json','w') as outfile:
 #    json.dump(itemsToKCs,outfile,cls=SetEncoder)
-lrsURL = "http://tokyo.x-in-y.com/data/xAPI/statements"
-basicAuth = "N2RlNTU1ZjJhNjRkODVhZGRlYjk0ODNhMGQ0ZTU1YWYyYmExYzQ0Nzo0NThmYzkyOTU1MmQ3NzQ2NDhhMjViMmFjZmM1ZTE1MzQ3ZTc3YmI4"
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 

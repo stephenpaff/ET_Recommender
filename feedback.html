@@ -36,33 +36,46 @@ textarea {
 <p id='output'></p>
 
 <script>
-window.cb = function(){
+var cb = function(){
   console.log("in window.cb");
   mappingsAndDifficulties = getMappingsAndDifficulties();
   var itemsToTopic = mappingsAndDifficulties["mappings"]["itemsToTopic"];
   var itemsToLRType = mappingsAndDifficulties["mappings"]["itemsToLRType"];
-  setRegAPIConfig();
-  var search = ADL.XAPIWrapper.searchParams();
-  search['verb'] = "https://umiis.github.io/ITSProfile/verbs/SaveKCScore";
-  search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
-  search['limit'] = 1;
-  var ret = ADL.XAPIWrapper.getStatements(search);
-  window.ret = ret;
-  try{
-    var SKOTitleSplit = ret.statements[0].context.extensions["http://autotutor.x-in-y.com/AT"].SKOTitle.split(":");
-    var lastItem = SKOTitleSplit[1].toLowerCase();
-    lastLRType = itemsToLRType[lastItem];
-    lastTopic = itemsToTopic[lastItem];
-  }catch{
-    lastTopic = "Series/Parallel Combination";
-    lastLRType = "Topic Summary";
+  var lrToLRType = mappingsAndDifficulties["mappings"]["lrToLRType"];
+  var lrTypes = Object.keys(lrToLRType).map(function(key){
+    return lrToLRType[key];
+  });
+  var topics = mappingsAndDifficulties['mappings']['topicOrder'];
+  //Populate topic selection dropdown
+  for(var index = 0; index < size_dict(topics); index++){
+    $("#topicSelect")[0].options[index] = new Option(topics[index],topics[index]);
   }
+  $("#topicSelect").prepend("<option value='default' selected='selected'>Select a Topic</option>");
+  //Populate learning resource selection dropdown
+  for(var index = 0; index < size_dict(lrTypes); index++){
+    $("#lrSelect")[0].options[index] = new Option(lrTypes[index],lrTypes[index]);
+  }
+  $("#lrSelect").prepend("<option value='default' selected='selected'>Select a Learning Resource</option>");
 }
-var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
+var curStudentEmail = "mailto:<?php echo $USER->email ?>";//"mailto:andrew.tackett@gmail.com";//
 submitFeedback = function(){
   //TODO clear selections on dropdowns
   var feedback = $("#feedback").val();
-  console.log(lastTopic + ":" + lastLRType);
+  var topic = $('#topicSelect').find(":selected").text();
+  var learningResource = $('#lrSelect').find(":selected").text();
+  var comment = $('#feedback').val();
+  var ret = sendFeedback(topic,learningResource,comment);
+  window.ret = ret;
+  if(ret.xhr.status == 200){
+    $("#output").text("Successfully submitted feedback!");
+    $("#feedback").val("");
+    setTimeout(function(){
+      $("#output").text("");
+    },5000);
+  }else{
+    $("#output").text("Error submitting feedback: " + ret.xhr.responseText);
+  }
 }
+startWrapper(cb);
 </script>
 </html>
