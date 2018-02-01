@@ -1,0 +1,86 @@
+<?php
+    require_once("../config.php");
+    require_login();
+?>
+<html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script type="text/javascript" src="./lib/cryptojs_v3.1.2.js"></script>
+<script type="text/javascript" src="./lib/verbs.js"></script>
+<script type="text/javascript" src="./lib/xapi-launch.js"></script>
+<script type="text/javascript" src="./lib/xapi-util.js"></script>
+<script type="text/javascript" src="./lib/xapistatement.js"></script>
+<script type="text/javascript" src="./lib/xapiwrapper.js"></script>
+<script src="./lib/myxapiclient.js"></script>
+<table id="performance" border="1px"></table>
+<script>
+var curStudentEmail = "xhu@memphis.edu";//"mailto:<?php echo $USER->email ?>";
+var mappingsAndDifficulties;
+
+var cb = function(){
+  mappingsAndDifficulties = getMappingsAndDifficulties();
+  topicPerformanceScores = getTopicPerformanceScores(curStudentEmail,mappingsAndDifficulties);
+  console.log("topicPerformanceScores" + JSON.stringify(topicPerformanceScores));
+  updateTableWithPerformanceScores(topicPerformanceScores,mappingsAndDifficulties);
+}
+
+updateTableWithPerformanceScores = function(topicPerformanceScores, mappingsAndDifficulties){
+  var topicOrder = mappingsAndDifficulties['mappings']['topicOrder'];
+  for(var index in topicOrder){
+    var topic = topicOrder[index];
+    var row = "<tr><td>" + toTitleCase(topic) + "</td><td>" + topicPerformanceScores[topic] + "</td></tr>";
+    $("#performance").append(row);
+  }
+}
+
+getTopicPerformanceScores = function(curStudentEmail, mappingsAndDifficulties){
+  var itemsToTopic = mappingsAndDifficulties['mappings']['itemsToTopic'];
+  var topics = mappingsAndDifficulties['mappings']['topicOrder'];
+
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match":
+        { "$and": [
+            {"statement.verb.id": "https://umiis.github.io/ITSProfile/verbs/SaveKCScore" },
+            {"statement.actor.mbox": curStudentEmail},
+        ]}
+    },
+    {
+      "$project": {
+          "kcScore": "$statement.result.score.scaled",
+          "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]}
+      }
+    }
+  ]);
+  var ret = wrapper.getStatementsAgg(search);
+  var avgKCScores = {};
+  var numKCs = {};
+  for(var index in topics){
+    var topic = topics[index];
+    avgKCScores[topic] = 0;
+    numKCs[topic] = 0;
+  }
+  for(var index in ret){
+    var problemID = ret[index]['problemID'].toLowerCase();
+    console.log("problemID: " + problemID + ", topic: " + topic);
+    var itemTopic = itemsToTopic[problemID].toLowerCase();
+    console.log("itemTopic: " + itemTopic);
+    var lrType = itemsToLRType[problemID];
+    var kcScore = ret[index]['kcScore'];
+    console.log("kcScore: " + kcScore);
+    avgKCScores[itemTopic] += kcScore;
+    numKCs[itemTopic] += 1;
+  }
+
+  for(var topic in avgKCScores){
+    if(numKCs[topic] > 0){
+      avgKCScores[topic] /= numKCs[topic];
+    }
+  }
+
+  return avgKCScores;
+}
+startWrapper(cb);
+</script>
+</html>
