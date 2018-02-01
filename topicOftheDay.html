@@ -79,8 +79,8 @@ finishCurContent = function(){
 
 findNextAssignmentAndUpdatePage = function(){
   var result = getLastLRTypeAndItemCompleted(curStudentEmail,mappingsAndDifficulties);
-  var lastLRTypeCompleted = result[0].toLowerCase();
-  var lastItemCompleted = result[1].toLowerCase();
+  var lastLRTypeCompleted = result[0];
+  var lastItemCompleted = result[1];
   curTopic = getTopicOfTheDay(lastItemCompleted,curStudentEmail,mappingsAndDifficulties);
   console.log("lastLRTypeCompleted: " + lastLRTypeCompleted + ", item: " + lastItemCompleted + ", topic: " + curTopic);
   var nextThingToDoArr = getNextThingToDo(curStudentEmail,curTopic,lastLRTypeCompleted,lastItemCompleted,mappingsAndDifficulties);
@@ -460,7 +460,7 @@ getScoreOnMathItems = function(curStudentEmail,mappingsAndDifficulties){
 
 getLinkAndProblemIDFromTopicLRType = function(topic,LRType,mappingsAndDifficulties){
   //TODO this is a bit hacky and should probably be done better
-  if(LRType === TS){
+  if(LRType === TS.toLowerCase()){
     var topicsToSourceLinks = mappingsAndDifficulties['mappings']['topicsToSourceLinks'];
     return [topicsToSourceLinks[topic],topic];
   }else{
@@ -600,9 +600,9 @@ getLastLRTypeAndItemCompleted = function(curStudentEmail,mappingsAndDifficulties
     var lr = SKOTitle.split(':')[0]; //NOTE: right now this is only valid as a lrtype for BEETLE, DRAGOON, and SKILL BUILDER, AT outputs random things
     var lastItem = SKOTitle.split(':')[1];
     console.log("lr: " + lr + ", lastItem: " + lastItem);
-    return [lr.toLowerCase(),lastItem];
+    return [lr.toLowerCase(),lastItem.toLowerCase()];
   }else{
-    return [];//TODO fill out
+    return [undefined,undefined];
   }
 }
 
