@@ -1,3 +1,7 @@
+<?php
+    require_once("../config.php");
+    require_login();
+?>
 <html>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script type="text/javascript" src="./lib/cryptojs_v3.1.2.js"></script>
@@ -171,7 +175,7 @@ lowTopicMasteryThreshold = 0.3
 
 var findNextTopic = function(lastTopic,mappingsAndDifficulties){
   var topicOrder = mappingsAndDifficulties['mappings']['topicOrder'];
-  var lastTopicIndex = 0;
+  var lastTopicIndex = -1;
   for(var topic in topicOrder){
     if(topic===lastTopic){
       lastTopicIndex = topicOrder[topic];
@@ -182,7 +186,7 @@ var findNextTopic = function(lastTopic,mappingsAndDifficulties){
   return nextTopic;
 }
 
-var getLastTopic = function(curStudentEmail,mappingsAndDifficulties){
+var getLastLRTypeAndTopic = function(curStudentEmail,mappingsAndDifficulties){
   try{
     log("getting last topic");
     var itemsToTopic = mappingsAndDifficulties["mappings"]["itemsToTopic"];
@@ -203,7 +207,7 @@ var getLastTopic = function(curStudentEmail,mappingsAndDifficulties){
   }catch(e){
     log("Error getting last topic: " + e);
     //Default last topic in case we can't find one or error out
-    return [TS,"Series/Parallel Combination"]
+    return [TS,"series/parallel combination"]
   }
 }
 
@@ -261,6 +265,7 @@ var checkBelowProcessingTimeThreshold = function(curStudentEmail,mappingsAndDiff
 //Update and store calculated attributes
 populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
   curUserData = {};
+  curUserData["curStudentEmail"] = curStudentEmail;
   var KCsToTopics = mappingsAndDifficulties['mappings']['KCsToTopics'];
   var KCsToTopicLRType = mappingsAndDifficulties['mappings']['KCsToTopicLRType'];
   var topicsToKCs = mappingsAndDifficulties['mappings']['topicsToKCs'];
@@ -299,7 +304,7 @@ populateUpdateCurUserData = function(curStudentEmail,mappingsAndDifficulties){
   curUserData["topicScores"] = topicScores;
   curUserData["topicLRTypeScores"] = topicLRTypeScores;
   curUserData["kcScores"] = kcScores;
-  var lastLRTypeAndTopic = getLastTopic(curStudentEmail,mappingsAndDifficulties);
+  var lastLRTypeAndTopic = getLastLRTypeAndTopic(curStudentEmail,mappingsAndDifficulties);
   curUserData["lastLRType"] = lastLRTypeAndTopic[0];
   curUserData["lastTopic"] = lastLRTypeAndTopic[1];
   curUserData["belowProcessingTimeThreshold"] = checkBelowProcessingTimeThreshold(curStudentEmail,mappingsAndDifficulties);
@@ -390,7 +395,7 @@ recommendationRules = {
       log("pushingTheEnvelope");
       var recommendations = [];
       var mapping = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"];
-
+      log("curUserData.topicScores: " + JSON.stringify(curUserData.topicScores));
       for(var topic in curUserData.topicScores){
         if(curUserData.topicScores[topic] > topicMasteryThreshold){//a)
             //look for whether user has been assigned items from LRs: AT DR Convos, CR Items, or Dragoon items
@@ -410,15 +415,24 @@ recommendationRules = {
         }
       }
 
+      //TODO actually look at scores before doing this
       //b) look for LR with scores less than topicMasteryThreshold ->
       //recommend AT DR Convos, Circuit Reasoning items, or Dragoon items
-      var topicLRType = curUserData.lastTopic + "," + ATDRC;
-      getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
-      topicLRType = curUserData.lastTopic + "," + CR;
-      getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
-      topicLRType = curUserData.lastTopic + "," + DRAGOON;
-      getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
-
+      var LRTypes = [ATDRC,CR,DRAGOON];
+      lrPerformanceScores = getLRPerformanceScores(topic, LRTypes, curUserData["curStudentEmail"], mappingsAndDifficulties);
+      log("lrPerformanceScores: " + JSON.stringify(lrPerformanceScores));
+      if(lrPerformanceScores[ATDRC] < topicMasteryThreshold){
+        var topicLRType = curUserData.lastTopic + "," + ATDRC;
+        getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+      }
+      if(lrPerformanceScores[CR] < topicMasteryThreshold){
+        topicLRType = curUserData.lastTopic + "," + CR;
+        getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+      }
+      if(lrPerformanceScores[DRAGOON] < topicMasteryThreshold){
+        topicLRType = curUserData.lastTopic + "," + DRAGOON;
+        getRandomItemFromTopicLRType(topicLRType,mappingsAndDifficulties,recommendations);
+      }
       return recommendations;
     },
     motivatedBottomDweller : function(curUserData,mappingsAndDifficulties){
@@ -479,6 +493,61 @@ recommendationRules = {
     }
 }
 
+getLRPerformanceScores = function(topic, LRTypes, curStudentEmail, mappingsAndDifficulties){
+  var itemsToLRType = mappingsAndDifficulties['mappings']['itemsToLRType'];
+  var itemsToTopic = mappingsAndDifficulties['mappings']['itemsToTopic'];
+
+  setAggAPIConfig();
+  var search = ADL.XAPIWrapper.searchParamsAgg();
+  search['pipeline'] = JSON.stringify([
+    {
+      "$match":
+        { "$and": [
+            {"statement.verb.id": "https://umiis.github.io/ITSProfile/verbs/SaveKCScore" },
+            {"statement.actor.mbox": curStudentEmail},
+        ]}
+    },
+    {
+      "$project": {
+          "kcScore": "$statement.result.score.scaled",
+          "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]}
+      }
+    }
+  ]);
+  var ret = wrapper.getStatementsAgg(search);
+  var avgKCScores = {};
+  var numKCs = {};
+  for(var index in LRTypes){
+    var lrType = LRTypes[index];
+    avgKCScores[lrType] = 0;
+    numKCs[lrType] = 0;
+  }
+  for(var index in ret){
+    var problemID = ret[index]['problemID'].toLowerCase();
+    console.log("problemID: " + problemID + ", topic: " + topic);
+    var itemTopic = itemsToTopic[problemID].toLowerCase();
+    console.log("itemTopic: " + itemTopic);
+    if(itemTopic === topic){
+      var lrType = itemsToLRType[problemID];
+      if(LRTypes.indexOf(lrType)!= -1){
+        var kcScore = ret[index]['kcScore'];
+        avgKCScores[lrType] += kcScore;
+        numKCs[lrType] += 1;
+      }
+    }
+  }
+
+  for(var lrType in avgKCScores){
+    if(numKCs[lrType] > 0){
+      avgKCScores[lrType] /= numKCs[lrType];
+    }else{
+      avgKCScores[lrType] = undefined;
+    }
+  }
+
+  return avgKCScores;
+}
+
 getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,recommendationsArr){
   log("getRandomItemFromTopicLRType: " + topicLRType);
   var items = mappingsAndDifficulties["mappings"]["topicLRTypeToItems"][topicLRType]
@@ -489,7 +558,7 @@ getRandomItemFromTopicLRType = function(topicLRType,mappingsAndDifficulties,reco
 }
 
 var cb = function(){
-  var curStudentEmail = "mailto:xhu@memphis.edu";//"mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
+  var curStudentEmail = "mailto:<?php echo $USER->email ?>";
   log("curStudentEmail: " + curStudentEmail);
   var mappingsAndDifficulties = getMappingsAndDifficulties();
   var recommendations = getRecommendations(curStudentEmail,mappingsAndDifficulties);

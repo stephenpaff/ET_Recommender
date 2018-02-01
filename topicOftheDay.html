@@ -59,7 +59,7 @@ var mappingsAndDifficulties;
 
 //Initializing tracking state from LRS
 var cb = function(){
-  curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
+  curStudentEmail = "mailto:<?php echo $USER->email ?>";
   console.log("curStudentEmail: " + curStudentEmail);
   mappingsAndDifficulties = getMappingsAndDifficulties();
   window.mappingsAndDifficulties = mappingsAndDifficulties;
@@ -595,11 +595,15 @@ getLastLRTypeAndItemCompleted = function(curStudentEmail,mappingsAndDifficulties
   search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
   search['limit'] = 1;
   var ret = wrapper.getStatements(search);
-  var SKOTitle = ret['statements'][0]['context']["extensions"]["http://autotutor.x-in-y.com/AT"]["SKOTitle"];
-  var lr = SKOTitle.split(':')[0]; //NOTE: right now this is only valid as a lrtype for BEETLE, DRAGOON, and SKILL BUILDER, AT outputs random things
-  var lastItem = SKOTitle.split(':')[1];
-  console.log("lr: " + lr + ", lastItem: " + lastItem);
-  return [lr.toLowerCase(),lastItem];
+  if(ret['statements'].length >0 ){
+    var SKOTitle = ret['statements'][0]['context']["extensions"]["http://autotutor.x-in-y.com/AT"]["SKOTitle"];
+    var lr = SKOTitle.split(':')[0]; //NOTE: right now this is only valid as a lrtype for BEETLE, DRAGOON, and SKILL BUILDER, AT outputs random things
+    var lastItem = SKOTitle.split(':')[1];
+    console.log("lr: " + lr + ", lastItem: " + lastItem);
+    return [lr.toLowerCase(),lastItem];
+  }else{
+    return [];//TODO fill out
+  }
 }
 
 startWrapper(cb);
