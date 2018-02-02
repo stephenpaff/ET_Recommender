@@ -110,7 +110,11 @@ getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
         log("overallPerformanceScore: " + overallPerformanceScore);
         if(overallPerformanceScore < lowTopicMasteryThreshold){
           //zpd algorithm
-          var items = finalRecommendations;
+          var items = [];
+          for(var index in finalRecommendations){
+            var item = finalRecommendations[index].split(',')[2];
+            items.push(item);
+          }
           finalRecommendations = [];
           items = getItemsViaZPDAlgorithm(3,items,curUserData.kcScores,mappingsAndDifficulties);
           for(var index in items){
@@ -145,7 +149,7 @@ getRecommendations = function(curStudentEmail,mappingsAndDifficulties){
   return finalRecommendations;
 }
 
-getOverallPerformanceScore = function(lastTopic,lastLRType,curUserData,mappingsAndDifficulties){
+getOverallPerformanceScore = function(curUserData,mappingsAndDifficulties){
   log("get overallPerformanceScore");
   var lastTopic = curUserData['lastTopic'];
   var lastLRType = curUserData['lastLRType'];

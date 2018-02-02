@@ -38,6 +38,10 @@ body, html {width: 100%; height: 100%; margin: 0; padding: 0}
 <iframe id="displayedContent" src="" frameborder="0" style="overflow:hidden" sandbox="allow-top-navigation allow-scripts allow-forms"></iframe>
 </div>
 <button onclick="finishCurContent()">Next</button>
+<button id="low" onclick="fakeKCScore(0.1)">Low fake kc score</button>
+<button id="med" onclick="fakeKCScore(0.5)">Med fake kc score</button>
+<button id="high" onclick="fakeKCScore(0.8)">High fake kc score</button>
+<p id="output"></p>
 <script type="text/javascript">
 var ATDRC = "autotutor deep reasoning conversations";
 var CB = "circuit basics";
@@ -46,6 +50,7 @@ var ATKCC = "autotutor knowledge check conversations";
 var DRAGOON = "dragoon modeling";
 var EL = "electronic laws";
 var TS = "topic summary";
+var testing = true;
 var completedTopicOfTheDayLink = "https://tokyo.x-in-y.com/hostedResources/general/completedTopicOfTheDay.html";
 var topicSummaryReadingLowThreshold = 5000; //5 seconds, in milliseconds
 var highPerformanceThreshold = 0.7;
@@ -57,13 +62,45 @@ var curProblemID = null;
 var curStudentEmail;
 var mappingsAndDifficulties;
 
+if(testing){
+  $("#low").show('');
+  $("#med").show('');
+  $("#high").show('');
+}else{
+  $("#low").hide('');
+  $("#med").hide('');
+  $("#high").hide('');
+}
+
+fakeKCScore = function(score){
+  console.log("fake kc score: " + score);
+  var itemsToKCs = mappingsAndDifficulties['mappings']['itemsToKCs'];
+  var kcs = itemsToKCs[curProblemID];
+  var kcScores = {};
+  for(var index in kcs){
+    var kc = kcs[index];
+    kcScores[kc] = score;
+  }
+  console.log("fakeKCScores: " + JSON.stringify(kcScores));
+  var ret = sendKCScore(curLR,curProblemID,kcScores);
+  window.ret = ret;
+  if(ret.status == 200){
+    $("#output").text("Successfully submitted fake kc scores!");
+    setTimeout(function(){
+      $("#output").text("");
+    },5000);
+  }else{
+    $("#output").text("Error submitting fake kc scores: " + ret.responseText);
+  }
+}
+
 //Initializing tracking state from LRS
 var cb = function(){
   curStudentEmail = "mailto:<?php echo $USER->email ?>";
   console.log("curStudentEmail: " + curStudentEmail);
   mappingsAndDifficulties = getMappingsAndDifficulties();
   window.mappingsAndDifficulties = mappingsAndDifficulties;
-  $("#displayedContent").attr("src","http://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
+  $("#displayedContent").attr("src","ttp://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
   findNextAssignmentAndUpdatePage();
 }
 finishCurContent = function(){
@@ -88,10 +125,11 @@ findNextAssignmentAndUpdatePage = function(){
   curLR = nextThingToDoArr[1];
   curProblemID = nextThingToDoArr[2];
   console.log("nextThingToDoLink: " + nextThingToDoLink);
+  console.log("curProblemID: " + curProblemID + ", curLR: " + curLR + ", curTopic: " + curTopic);
   var topicAndLR = curTopic + " - " + curLR;
   topicAndLR = toTitleCase(topicAndLR);
   $("#topicAndLR").text(topicAndLR);
-  //$("#displayedContent").attr("src",nextThingToDoLink + queryString);
+  $("#displayedContent").attr("src",nextThingToDoLink + queryString);
 }
 
 getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,mappingsAndDifficulties){
@@ -103,13 +141,14 @@ getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,m
   switch(lastLRTypeCompleted){
     case TS:
       //launch ATDRC
-      var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,ATDRC,mappingsAndDifficulties);
-      nextThingToDoLink = nextThingToDoArr[0];
-      nextProblemID = nextThingToDoArr[1];
-      nextLRType = ATDRC;
       //Handle first three topics which have no ATDRC problems
-      if(!nextThingToDoLink){
-        nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,ATKCC,mappingsAndDifficulties);
+      if(checkIfLRForTopic(topic,ATDRC,mappingsAndDifficulties)){
+        var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,ATDRC,mappingsAndDifficulties);
+        nextThingToDoLink = nextThingToDoArr[0];
+        nextProblemID = nextThingToDoArr[1];
+        nextLRType = ATDRC;
+      }else{
+        var nextThingToDoArr = getLinkAndProblemIDFromTopicLRType(topic,ATKCC,mappingsAndDifficulties);
         nextThingToDoLink = nextThingToDoArr[0];
         nextProblemID = nextThingToDoArr[1];
         nextLRType = ATKCC;
@@ -173,7 +212,7 @@ getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,m
       }else{ //lowPerformanceThreshold < performanceScore < highPerformanceThreshold
         var itemsToSourceLinks = mappingsAndDifficulties['mappings']['itemsToSourceLinks'];
 
-        if(checkIfCRForTopic(topic,mappingsAndDifficulties)){
+        if(checkIfLRForTopic(topic,CR,mappingsAndDifficulties)){
            var topicLRType = topic + "," + CR;
            var missedKCs = getKCsMissedFromATDRCStep(topic,curStudentEmail,mappingsAndDifficulties);
            var kcScores =  getKCScores(curStudentEmail);
@@ -249,9 +288,9 @@ getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,m
   return [nextThingToDoLink,nextLRType,nextProblemID];
 }
 
-checkIfCRForTopic = function(topic,mappingsAndDifficulties){
+checkIfLRForTopic = function(topic,lr,mappingsAndDifficulties){
   var topicLRTypeToItems = mappingsAndDifficulties['mappings']['topicLRTypeToItems'];
-  var items = topicLRTypeToItems[topic + "," + CR];
+  var items = topicLRTypeToItems[topic + "," + lr];
   return !!items;
 }
 
@@ -489,7 +528,11 @@ getTopicOfTheDay = function(lastItemCompleted,curStudentEmail,mappingsAndDifficu
   }else{
     var topicsAssigned = getTopicsAssigned(curStudentEmail);
     window.topicsAssigned = topicsAssigned;
-    return topicsAssigned[0]['topic']; //Assumes the topicsAssigned are sorted in ascending order
+    if(topicsAssigned.length > 0){
+      return topicsAssigned[0]['topic']; //Assumes the topicsAssigned are sorted in ascending order
+    }else{
+      return "filter";
+    }
   }
 }
 
