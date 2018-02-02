@@ -374,8 +374,10 @@ getATDRCPerformanceScore = function(topic, curStudentEmail, mappingsAndDifficult
     console.log("itemTopic: " + itemTopic);
     if(itemTopic === topic){
       var lrType = itemsToLRType[problemID];
+      console.log("lrType:" + lrType);
       if(lrType === ATDRC || lrType === ATKCC){
         var kcScore = ret[index]['kcScore'];
+        console.log("kcScore: " + kcScore);
         avgKCScore += kcScore;
         numKCs += 1;
       }
@@ -384,6 +386,7 @@ getATDRCPerformanceScore = function(topic, curStudentEmail, mappingsAndDifficult
   if(numKCs > 0){
     avgKCScore /= numKCs;
   }
+  console.log("numKCs: " + numKCs);
 
   return avgKCScore;
 }
