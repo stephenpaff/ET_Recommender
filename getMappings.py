@@ -134,11 +134,17 @@ for topic in dictAll:
             for kc in dictAll[topic][learningResource][item]:
                 itemsToKCs[item].add(kc)
 
+beetleTopics = ["Ohm's Law & Kirchhoff's Law".lower(),"Series & Parallel Circuit".lower(),"Series/Parallel Combination".lower()]
 itemsToTopic = {} #Used
 for topic in dictAll:
     itemsToTopic[topic] = topic
     for learningResource in dictAll[topic]:
         for item in dictAll[topic][learningResource]:
+            #Hacky solution for us including beetle items as viable in all topics
+            #Need this to prevent mess ups with performance scores and last topic
+            if "beetle" in item.lower():
+                if topic not in beetleTopics:
+                    continue
             itemsToTopic[item] = topic
 
 topicLRTypeToItems = {} #Used

@@ -20,10 +20,15 @@
       <td><select id="topicSelections"></select></td>
     </tr>
     <tr>
+      <td>Emails (one per line)</td>
+      <td><textarea id="emails" rows=10 cols =30></textarea></td>
+    </tr>
+    <tr>
       <td></td>
       <td><button onclick="submitTopicOfTheDay()">Submit</button></td>
     </tr>
   </table>
+  <p id='output'></p>
 </body>
 <script>
 var mappingsAndDifficulties;
@@ -31,7 +36,6 @@ var cb = function(){
   //Query for topics in mappings
   mappingsAndDifficulties = getMappingsAndDifficulties();
   topics = mappingsAndDifficulties['mappings']['topicOrder'];
-  window.topics = topics;
   console.log("topics: " + JSON.stringify(topics));
   for(var index = 0; index < size_dict(topics); index++){
     $("#topicSelections")[0].options[index] = new Option(topics[index],topics[index]);
@@ -41,13 +45,19 @@ submitTopicOfTheDay = function(){
   var topic = $("#topicSelections").find(":selected").text();
   console.log("Selected topic: " + topic);
   var studentEmails = getStudentEmails();
-  sendTopicAssignment(studentEmails,topic);
+  var ret = sendTopicAssignment(studentEmails,topic);
+  if(ret.status == 200){
+    $("#output").text("Successfully submitted topic assignments!");
+    setTimeout(function(){
+      $("#output").text("");
+    },5000);
+  }else{
+    $("#output").text("Error submitting topic assignments: " + ret.responseText);
+  }
 }
 
 getStudentEmails = function(){
-  var emails = [];
-  //TODO fill out to query LMS somehow
-  emails.push("andrew.tackett@gmail.com");
+  var emails = $("#emails").val().split("\n");
   return emails;
 }
 startWrapper(cb);

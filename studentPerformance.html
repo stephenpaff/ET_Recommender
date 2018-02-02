@@ -13,7 +13,7 @@
 <script src="./lib/myxapiclient.js"></script>
 <table id="performance" border="1px"></table>
 <script>
-var curStudentEmail = "xhu@memphis.edu";//"mailto:<?php echo $USER->email ?>";
+var curStudentEmail = "mailto:<?php echo $USER->email ?>";
 var mappingsAndDifficulties;
 
 var cb = function(){
@@ -66,7 +66,6 @@ getTopicPerformanceScores = function(curStudentEmail, mappingsAndDifficulties){
     console.log("problemID: " + problemID + ", topic: " + topic);
     var itemTopic = itemsToTopic[problemID].toLowerCase();
     console.log("itemTopic: " + itemTopic);
-    var lrType = itemsToLRType[problemID];
     var kcScore = ret[index]['kcScore'];
     console.log("kcScore: " + kcScore);
     avgKCScores[itemTopic] += kcScore;
