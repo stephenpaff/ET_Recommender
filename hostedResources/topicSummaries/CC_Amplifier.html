@@ -7,14 +7,13 @@
 <br />
 <button id="finishButton" onclick="submitFinished()">Finish</button>
 </body>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js">if (window.top != window) { $("#finishButton").css("display","none");console.log("hiding finish button");} </script>
-<script src="../lib/xapiwrapper.min.js">if (window.top != window) { $("#finishButton").css("display","none");console.log("hiding finish button");} </script>
-<script src="../lib/myxapiclient.js">if (window.top != window) { $("#finishButton").css("display","none");console.log("hiding finish button");} </script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
 <script>
 
 function submitFinished() {
   sendCompleted("Topic Summary","CC Amplifier");
 }
-
-if (window.top != window) { $("#finishButton").css("display","none");console.log("hiding finish button");} </script>
+</script>
 </html>

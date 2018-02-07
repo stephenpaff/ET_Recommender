@@ -15,13 +15,14 @@
 </table>
 <br />
 <button onclick="submitAnswer()">Submit Answer</button>
+<p id="output"></p>
 </body>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="../lib/xapiwrapper.min.js"></script>
 <script src="../lib/myxapiclient.js"></script>
 <script>
 var answerCorrect = false;
-
+startWrapper();
 function submitAnswer() {
   var radios = document.getElementsByName("choice");
   var i = 0, len = radios.length;
@@ -51,7 +52,16 @@ function submitAnswer() {
   kcScore = firstCorrect ? kcScore + 0.5 : kcScore;
 
   var kcNamesAndScores = {"resistor_parallel_behavior":kcScore};
-  sendKCScore("BEETLE","BEETLEQ7",kcNamesAndScores);
+  var ret = sendKCScore("BEETLE","BEETLEQ7",kcNamesAndScores);
+  window.ret = ret;
+  if(ret.status == 200){
+    $("#output").text("Successfully submitted answer!");
+    setTimeout(function(){
+      $("#output").text("");
+    },5000);
+  }else{
+    $("#output").text("Error submitting answer: " + ret.responseText);
+  }
 }
 </script>
 </html>

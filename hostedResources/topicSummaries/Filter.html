@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+<body>
+<p><p><p align="center"><b><u>Filter</u></b><b><u></u></b></p>
+
+<p><b>&nbsp;</b></p>
+
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>Electronic filters</b>&nbsp;are
+circuits which perform&nbsp;signal processing&nbsp;functions, specifically to
+remove unwanted frequency components from the signal, to enhance wanted ones.
+In other words, it is sometimes desirable to have circuits capable of
+selectively filtering one frequency or range of frequencies out of a mix of
+different frequencies in a circuit. A circuit designed to perform this
+frequency selection is called a&nbsp;<i>filter circuit</i>, or simply a&nbsp;<i>filter</i>.
+</p>
+
+<p>&nbsp;</p>
+
+<p><!--[if !supportLists]--><b><li style="list-style-type:circle" /></b>&nbsp; <!--[endif]-->Common filter circuit designs are for, Low-pass,
+High-pass, band-pass and band-stop filter operations as described below:</p>
+
+<p>&nbsp;<b>Low-Pass
+Filter:</b></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]--><!--[if !vml]--><img width="266" height="191" src="FilterImage1.jpg" align="left" hspace="12" v:shapes="Picture_x0020_19"><!--[endif]-->A low-pass filter
+passes low frequency signals, and rejects signals at frequencies above the
+filter's cutoff frequency. Low-pass filters are used whenever high frequency
+components must be removed from a signal.</p>
+
+<p><!--[if !supportLists]--><li />&nbsp;
+<!--[endif]-->The frequencies between 0 and fc, are called
+passband frequencies, while the frequencies above fc are called as stopband
+frequencies.</p>
+
+<p><!--[if !supportLists]--><li />&nbsp;
+<!--[endif]-->Therefore the bandwidth is fc.</p>
+<br />
+<br />
+<br /><br /><br />
+<p><b>High-Pass
+Filter:</b></p>
+
+<p><!--[if !vml]--><img width="235" height="145" src="FilterImage2.jpg" align="left" hspace="12" v:shapes="Picture_x0020_22"><!--[endif]--></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->A filter that passes signals above a cutoff frequency
+fc is a high pass filter.</p>
+
+<p>&nbsp;</p>
+
+<p><!--[if !supportLists]--><li />&nbsp;
+<!--[endif]-->The frequencies between 0 and fc, are blocked,
+while the frequencies above fc are passed.</p>
+<br /><br /><br />
+<p>&nbsp;</p>
+
+<p><b>Band-Pass Filter:</b></p><!--[if !vml]--><img width="264" height="166" src="FilterImage3.jpg" align="left" hspace="12" v:shapes="Picture_x0020_23"><!--[endif]-->
+
+<p>&nbsp;</p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->When the filter circuit passes signals that are above
+one cutoff frequency and below a second cutoff frequency, it is called a band
+pass filter.</p>
+
+<p><!--[if !supportLists]--><li />&nbsp;
+<!--[endif]-->As illustrated in
+the figure, the band pass filter has a pass band between two cutoff frequencies
+fc2 and fc1, where fc2 &gt; fc1 and two stop bands: 0&lt;f&lt;fc1 and f&gt;fc2.</p>
+<br /><br /><br />
+<p><b>Band-Stop
+Filter:</b></p>
+
+<p><!--[if !vml]--><img width="257" height="159" src="FilterImage4.jpg" align="left" hspace="12" v:shapes="Picture_x0020_26"><!--[endif]--></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->The band stop or band reject filter performs exactly
+opposite to the band pass filter.</p>
+
+<p><!--[if !supportLists]--><li />
+<!--[endif]-->It has a band
+stop between two cut off frequencies fc2 and fc1 and two pass bands:
+0&lt;f&lt;fc1 and f&gt;fc2.</p>
+
+<p>&nbsp;</p>
+<br /><br /><br /><br />
+<p><!--[if !supportLists]--><b><li style="list-style-type:circle" /></b>&nbsp; <!--[endif]-->Some of the filter circuit configurations which are
+the part of the power supply chain after the rectifier circuit, are explained
+next: </p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->They remove the AC components from the rectified
+output, but allows the DC component to reach the load.&nbsp; </p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->They consist of or is a combination of the passive
+components, namely, Resistor (R), Capacitor (C) and Inductor (L).</p>
+
+<p><!--[if !supportLists]--><b><li style="list-style-type:circle" /></b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<!--[endif]-->The inductor (L)
+and Capacitor (C) are used as main filtering components because of the
+following characteristics: </p>
+
+<p><b>Inductor (L): </b></p>
+
+<p><!--[if !vml]--><img width="183" height="125" src="FilterImage5.jpg" align="left" hspace="12" v:shapes="Picture_x0020_1"><!--[endif]--></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->Inductive reactance increases with the increase in the
+frequency. </p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->So, the inductor passes DC signal but it blocks the AC
+or high frequency signals.</p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><b>Capacitor (C):</b></p><!--[if !vml]--><img width="188" height="127" src="FilterImage6.jpg" align="left" v:shapes="Group_x0020_4 Picture_x0020_2 Picture_x0020_3"><!--[endif]-->&nbsp;
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->Capacitive reactance decreases with the increase in
+the frequency. </p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->So, the capacitor passes AC signal but it blocks the
+DC or Low frequency signals.</p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><b>Resistor (R): </b></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->Resistor helps to introduce the time constant of the
+circuit to control the charging and discharging of a capacitor required for the
+filtering action.</p>
+
+<p><!--[if !supportLists]-->·&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<!--[endif]--><b>Practical filter circuit designs:</b></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->Inductor filter</p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->Capacitor filter</p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->LC filter</p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->CLC or Pi or π filter</p>
+
+<p>&nbsp;</p>
+
+<p><!--[if !vml]--><img width="264" height="161" src="FilterImage7.jpg" align="left" hspace="12" v:shapes="Picture_x0020_5"><!--[endif]--><b><u>Inductor Filter</u></b><u>:&nbsp; </u></p>
+
+<p>&nbsp;</p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->The inductor filter consists of an inductor L which is
+inserted between the rectifier and the load resistance R<sub>L</sub>.<sub> </sub></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->The rectifier contains AC as well as DC components.
+When the output passes through the inductor, it offers a high resistance to the
+AC component and no resistance to DC components. Thus, it blocks AC components
+and passes only the DC to the load. </p>
+
+<p>&nbsp;</p>
+
+<p><b><u>Capacitor
+Filter</u></b><u>:&nbsp; </u></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]--><!--[if !vml]--><img width="358" height="162" src="FilterImage8.jpg" align="left" hspace="12" v:shapes="Picture_x0020_9"><!--[endif]-->A capacitor here is connected across the load, which
+gets charged during the rise of the voltage cycle.<sub> </sub></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->This charge is supplied to the load by discharging
+during the fall in the voltage cycle. </p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->This process is repeated for each cycle to remove the
+ripples or AC components from the signal.</p>
+
+<p>&nbsp;</p>
+<br /><br /><br />
+<p><b><u>LC
+Filter</u></b><u>:&nbsp; </u></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]--><!--[if !vml]--><img width="292" height="164" src="FilterImage9.jpg" align="left" hspace="12" v:shapes="Picture_x0020_11"><!--[endif]-->An inductor is connected in series with the load,
+which passes DC and blocks AC components.<sub> </sub></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->A capacitor is connected in parallel to the load,
+which passes the AC components from the signal coming through the inductor and
+passes smooth DC signal to the load, after removing the ripples. </p>
+
+<p>&nbsp;</p>
+<br /><br />
+<p><b><u>CLC
+or Pi (π) Filter</u></b><u>:&nbsp; </u></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]--><!--[if !vml]--><img width="288" height="172" src="FilterImage10.jpg" v:shapes="Group_x0020_18 Picture_x0020_14 Text_x0020_Box_x0020_16 Text_x0020_Box_x0020_17"><!--[endif]-->It consists of one inductor and two capacitors
+connected across its each end. These three components are arranged in the shape
+of Greek letter Pi (π). </p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->The input capacitor C<sub>1</sub> offers very low
+reactance to the AC ripples, hence major part of the filtering is done by C<sub>1.</sub></p>
+
+<p><!--[if !supportLists]--><li />&nbsp; <!--[endif]-->The remaining ripples are further removed by the
+following LC section. &nbsp;</p>
+
+<p>These are all basically the low-pass filters which
+removes the high frequency ripples and outputs the smooth DC to the load. &nbsp;</p>
+
+<p>&nbsp;</p>
+
+<p><b>&nbsp;</b></p>
+
+<p><b>Additional Resources:</b></p>
+
+<p><a href="https://www.electronics-tutorials.ws/filter/filter_1.html"><b>https://www.electronics-tutorials.ws/filter/filter_1.html</b></a><b></b></p>
+
+<p><a href="https://www.daenotes.com/electronics/devices-circuits/filter-circuits"><b>https://www.daenotes.com/electronics/devices-circuits/filter-circuits</b></a><b> </b></p>
+
+<p><b><a href="https://electronicspost.com/what-is-a-filter-describe-the-classification-of-filters/">https://electronicspost.com/what-is-a-filter-describe-the-classification-of-filters/</a></b></p></p></p>
+
+<br />
+<button id="finishButton" onclick="submitFinished()">Finish</button>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="../lib/xapiwrapper.min.js"></script>
+<script src="../lib/myxapiclient.js"></script>
+<script>
+
+function submitFinished() {
+  sendCompleted("Topic Summary","Filter");
+}
+</script>
+</html>

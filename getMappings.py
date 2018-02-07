@@ -359,6 +359,7 @@ allDataJSON = json.dumps(allData,cls=SetEncoder)
 #with open('kcMappings.json','w') as outfile:
 #    json.dump(itemsToKCs,outfile,cls=SetEncoder)
 
+
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 
 r = requests.post(lrsURL,data=allDataJSON, headers=headers)
