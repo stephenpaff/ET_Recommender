@@ -13,7 +13,7 @@
 <script src="./lib/myxapiclient.js"></script>
 <table id="performance" border="1px"></table>
 <script>
-var curStudentEmail = "mailto:<?php echo $USER->email ?>";
+var curStudentEmail = "mailto:andrew.tackett@gmail.com";//"mailto:<?php echo $USER->email ?>";
 var mappingsAndDifficulties;
 
 var cb = function(){
@@ -49,17 +49,26 @@ getTopicPerformanceScores = function(curStudentEmail, mappingsAndDifficulties){
     {
       "$project": {
           "kcScore": "$statement.result.score.scaled",
-          "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]}
+          "problemID" : {"$arrayElemAt": [{"$split": ["$statement.context.extensions.http://autotutor&46;x-in-y&46;com/AT.SKOTitle", ":"]}, 1]},
+          "timestamp" : "$statement.timestamp"
       }
+    },
+    {
+        "$sort": {
+            "timestamp": 1
+        }
     }
   ]);
   var ret = wrapper.getStatementsAgg(search);
+  window.ret = ret;
+  var topicKCScores = {};
   var avgKCScores = {};
   var numKCs = {};
   for(var index in topics){
     var topic = topics[index];
     avgKCScores[topic] = 0;
     numKCs[topic] = 0;
+    topicKCScores[topic] = [];
   }
   for(var index in ret){
     var problemID = ret[index]['problemID'].toLowerCase();
@@ -68,15 +77,32 @@ getTopicPerformanceScores = function(curStudentEmail, mappingsAndDifficulties){
     console.log("itemTopic: " + itemTopic);
     var kcScore = ret[index]['kcScore'];
     console.log("kcScore: " + kcScore);
-    avgKCScores[itemTopic] += kcScore;
+    topicKCScores[itemTopic].push(kcScore);
     numKCs[itemTopic] += 1;
   }
 
-  for(var topic in avgKCScores){
-    if(numKCs[topic] > 0){
-      avgKCScores[topic] /= numKCs[topic];
+  for(var index in topics){
+    var topic = topics[index];
+    //Magic number for weighting factor that could probably be tuned more but works ok
+    var alpha = 1/3;
+    console.log("topic: " + topic + ", alpha: " + alpha + ", numKCs: " + numKCs[topic]);
+    for(var index2 in topicKCScores[topic]){
+      var curKCScore = topicKCScores[topic][index2];
+      console.log("curKCScore: " + curKCScore);
+      if(index2==0){
+        avgKCScores[topic] = curKCScore;
+      }else{
+        avgKCScores[topic] = (alpha * curKCScore) + ((1-alpha) * avgKCScores[topic]);
+      }
+      console.log("curScore: " + avgKCScores[topic]);
     }
   }
+
+  // for(var topic in avgKCScores){
+  //   if(numKCs[topic] > 0){
+  //     avgKCScores[topic] /= numKCs[topic];
+  //   }
+  // }
 
   return avgKCScores;
 }
