@@ -179,6 +179,7 @@ itemsToLRType = {}
 for item in itemsToLR:
     lr = list(itemsToLR[item])[0]
     itemsToLRType[item] = lrToLRType[lr]
+
 for topic in topicsToSummaryLinks:
     itemsToLRType[topic] = "Topic Summary".lower()
 
@@ -236,7 +237,6 @@ allKCs = KCsToTopics.keys()
 
 for kc in allKCs:
     difficulty = 0.5
-
     if("structure" in kc):
         difficulty = 0.25
     elif("function" in kc):
@@ -245,7 +245,6 @@ for kc in allKCs:
         difficulty = 0.75
     elif("parameter" in kc):
         difficulty = 1.0
-
     kcDifficulties[kc] = difficulty
 
 lrDifficulties = {}
@@ -253,7 +252,6 @@ lrDifficulties = {}
 for lr in lrToLRType:
     LRType = lrToLRType[lr].lower()
     lrDifficulty = 0.5
-
     if 'circuit basics' in LRType or 'electronic laws' in LRType:
         lrDifficulty = 0.25
     elif 'autotutor knowledge check conversations' in LRType:
@@ -262,7 +260,6 @@ for lr in lrToLRType:
         lrDifficulty = 0.75
     elif'dragoon modeling' in LRType:
         lrDifficulty = 1.0
-
     lrDifficulties[lr] = lrDifficulty
 
 itemDifficulties = {}
@@ -359,6 +356,17 @@ allDataJSON = json.dumps(allData,cls=SetEncoder)
 #with open('kcMappings.json','w') as outfile:
 #    json.dump(itemsToKCs,outfile,cls=SetEncoder)
 
+# topicByKCToLRTypes = {}
+# for topicLRType in topicLRTypeToKCs:
+#         topic = topicLRType.split(',')[0]
+#         lrType = topicLRType.split(',')[1]
+#         if topic not in topicByKCToLRTypes:
+#             topicByKCToLRTypes[topic] = {}
+#         kcs = topicLRTypeToKCs[topicLRType]
+#         for kc in kcs:
+#             if kc not in topicByKCToLRTypes[topic]:
+#                 topicByKCToLRTypes[topic][kc] = set()
+#             topicByKCToLRTypes[topic][kc].add(lrType)
 
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 

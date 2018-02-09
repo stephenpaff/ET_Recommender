@@ -134,6 +134,11 @@ findNextAssignmentAndUpdatePage = function(){
       topicAndLR = "Mastery threshold not met"
   }
   $("#topicAndLR").text(topicAndLR);
+  if(nextThingToDoLink.indexOf("?")!=-1){
+    queryString = "&" + queryString.slice(1,queryString.length);
+  }else{
+    queryString = "?" + queryString.slice(1,queryString.length);
+  }
   $("#displayedContent").attr("src",nextThingToDoLink + queryString);
 }
 
