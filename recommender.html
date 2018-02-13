@@ -527,17 +527,21 @@ getLRPerformanceScores = function(topic, LRTypes, curStudentEmail, mappingsAndDi
     numKCs[lrType] = 0;
   }
   for(var index in ret){
-    var problemID = ret[index]['problemID'].toLowerCase();
-    console.log("problemID: " + problemID + ", topic: " + topic);
-    var itemTopic = itemsToTopic[problemID].toLowerCase();
-    console.log("itemTopic: " + itemTopic);
-    if(itemTopic === topic){
-      var lrType = itemsToLRType[problemID];
-      if(LRTypes.indexOf(lrType)!= -1){
-        var kcScore = ret[index]['kcScore'];
-        avgKCScores[lrType] += kcScore;
-        numKCs[lrType] += 1;
+    try{
+      var problemID = ret[index]['problemID'].toLowerCase();
+      console.log("problemID: " + problemID + ", topic: " + topic);
+      var itemTopic = itemsToTopic[problemID].toLowerCase();
+      console.log("itemTopic: " + itemTopic);
+      if(itemTopic === topic){
+        var lrType = itemsToLRType[problemID];
+        if(LRTypes.indexOf(lrType)!= -1){
+          var kcScore = ret[index]['kcScore'];
+          avgKCScores[lrType] += kcScore;
+          numKCs[lrType] += 1;
+        }
       }
+    }catch(e){
+      log("error in getLRPerformanceScores: " + e);
     }
   }
 

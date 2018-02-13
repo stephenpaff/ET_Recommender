@@ -33,7 +33,7 @@ body, html {width: 100%; height: 100%; margin: 0; padding: 0}
 </style>
 <h1 id="topicAndLR" style="text-align: center;"></h1>
 <div class="myIframe">
-<iframe id="displayedContent" src="" frameborder="0" style="overflow:hidden" sandbox="allow-top-navigation allow-scripts allow-forms"></iframe>
+<iframe id="displayedContent" src="" frameborder="0" style="overflow:hidden" sandbox="allow-same-origin allow-top-navigation allow-scripts allow-forms"></iframe>
 </div>
 <button onclick="finishCurContent()">Next</button>
 <button id="low" onclick="fakeKCScore(0.1)">Low fake kc score</button>
@@ -100,7 +100,7 @@ var cb = function(){
   console.log("curStudentEmail: " + curStudentEmail);
   mappingsAndDifficulties = getMappingsAndDifficulties();
   window.mappingsAndDifficulties = mappingsAndDifficulties;
-  $("#displayedContent").attr("src","ttp://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
+  $("#displayedContent").attr("src","http://tokyo.x-in-y.com/hostedResources/topicSummaries/Ohms_and_Kirchhoffs_Laws.html" + queryString);
   findNextAssignmentAndUpdatePage();
 }
 finishCurContent = function(){
@@ -187,7 +187,7 @@ getNextThingToDo = function(curStudentEmail,topic,lastLRTypeCompleted,lastItem,m
         //check student has trouble interpreting circuits (no PnQs)
         var pnqs = getPnQs(curStudentEmail,lastItem);
         console.log("pnqs: " + JSON.stringify(pnqs));
-        if(pnqs.length==0){
+        if(!pnqs || pnqs.length==0){
           //launch CB/BEETLE
           thingsToDo.push(CB);
         }
@@ -546,7 +546,7 @@ getTopicOfTheDay = function(lastItemCompleted,curStudentEmail,mappingsAndDifficu
   }else{
     var topicsAssigned = getTopicsAssigned(curStudentEmail);
     window.topicsAssigned = topicsAssigned;
-    if(topicsAssigned.length > 0){
+    if(!!topicsAssigned && topicsAssigned.length > 0){
       return topicsAssigned[0]['topic']; //Assumes the topicsAssigned are sorted in ascending order
     }else{
       return "filter";
@@ -619,7 +619,7 @@ getLastTopicSummaryReadingTimeBelowThreshold = function(curStudentEmail){
     }
   ]);
   var ret = wrapper.getStatementsAgg(search);
-  if(ret.length > 0){
+  if(!!ret && ret.length > 0){
       return ret[0].timeTaken < topicSummaryReadingLowThreshold;
   }else{
     return false;
@@ -660,8 +660,8 @@ getLastLRTypeAndItemCompleted = function(curStudentEmail,mappingsAndDifficulties
   search['agent'] = JSON.stringify({"mbox":curStudentEmail,"objectType":"Agent"});
   search['limit'] = 1;
   var ret = wrapper.getStatements(search);
-  if(ret['statements'].length >0 ){
-    var SKOTitle = ret['statements'][0]['context']["extensions"]["http://autotutor.x-in-y.com/AT"]["SKOTitle"];
+  if(!!ret['statements'] && ret['statements'].length >0 ){
+    var SKOTitle = ret['statements'][0]['context']["extensions"]["http://autotutor&46;x-in-y&46;com/AT"]["SKOTitle"];
     var lr = SKOTitle.split(':')[0]; //NOTE: right now this is only valid as a lrtype for BEETLE, DRAGOON, and SKILL BUILDER, AT outputs random things
     var lastItem = SKOTitle.split(':')[1];
     console.log("lr: " + lr + ", lastItem: " + lastItem);

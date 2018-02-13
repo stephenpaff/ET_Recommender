@@ -368,6 +368,7 @@ allDataJSON = json.dumps(allData,cls=SetEncoder)
 #                 topicByKCToLRTypes[topic][kc] = set()
 #             topicByKCToLRTypes[topic][kc].add(lrType)
 
+
 headers = {'Content-Type': 'application/json', 'charset' : 'utf-8', "X-Experience-API-Version" : "1.0.3", 'Authorization' : str('Basic ' + basicAuth)}
 
 r = requests.post(lrsURL,data=allDataJSON, headers=headers)
