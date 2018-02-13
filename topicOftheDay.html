@@ -334,17 +334,21 @@ getNumLRUsedAndPerformanceScoreForThisTopic = function(topic,curStudentEmail,map
   var avgKCScore = 0;
   var numKCs = 0;
   for(var index in ret){
-    var problemID = ret[index]['problemID'].toLowerCase();
-    console.log("problemID: " + problemID + ", topic: " + topic);
-    var itemTopic = itemsToTopic[problemID].toLowerCase();
-    console.log("itemTopic: " + itemTopic);
-    if(itemTopic === topic){
-      var lrType = itemsToLRType[problemID];
-      lrUsed.add(lrType);
-      var kcScore = ret[index]['kcScore'];
-      avgKCScore += kcScore;
-      numKCs += 1;
-    }
+    try{
+      var problemID = ret[index]['problemID'].toLowerCase();
+      console.log("problemID: " + problemID + ", topic: " + topic);
+      var itemTopic = itemsToTopic[problemID].toLowerCase();
+      console.log("itemTopic: " + itemTopic);
+      if(itemTopic === topic){
+        var lrType = itemsToLRType[problemID];
+        lrUsed.add(lrType);
+        var kcScore = ret[index]['kcScore'];
+        avgKCScore += kcScore;
+        numKCs += 1;
+      }
+    }catch(e){
+      console.log("error in getNumLRUsedAndPerformanceScoreForThisTopic: " + e);
+    }    
   }
   if(numKCs > 0){
     avgKCScore /= numKCs;
